@@ -22,6 +22,9 @@ public class GameManager : MonoBehaviour
     private Player player; // The single player in this game
     private int turnCount = 0; // Tracks how many turns have been played
 
+    //current player
+    Player current_player;
+
     [SerializeField] private GameObject cardPrefab; // Prefab for card GameObjects
     [SerializeField] private  List<Transform> handAreas; // UI area to display player's hand
     [SerializeField] private GameObject publicCardPrefab; // Prefab for public card GameObjects
@@ -30,6 +33,8 @@ public class GameManager : MonoBehaviour
     UnoColor saved_Color = UnoColor.Red;
 
     [SerializeField] ColorPickerManager colorPickerManager;
+
+
 
 
 
@@ -106,9 +111,10 @@ public class GameManager : MonoBehaviour
         // }
 
         // check current player's hand for playable cards
-        Player current_player = all_players[turnCount % all_players.Count];
+        current_player = all_players[turnCount % all_players.Count];
         Debug.Log(current_player.name+" turn!");
         Boolean no_card_to_play = true;
+        // remove while loop for other rules
         while (no_card_to_play){
             foreach (GameObject cardObject in current_player.HandCardObjects)
             {
@@ -119,7 +125,7 @@ public class GameManager : MonoBehaviour
                 }
 
                 if(current_player.playerType == PlayerType.Human){
-                    Debug.Log("can play: " + cardComponent.isPlayable);
+                    //Debug.Log("can play: " + cardComponent.isPlayable);
                     cardObject.GetComponentInChildren<CardGUI>().SetCanPlay(cardComponent.isPlayable);
                 }
             }
@@ -130,7 +136,14 @@ public class GameManager : MonoBehaviour
             }
         }
         
+        if (current_player.playerType == PlayerType.Human){
+            // Human player play HERE
 
+            // maybe provided the state here
+            Debug.Log(current_player.name+" has no playable cards. Drawing a card.");
+            GameStateUno gameState = getGameState();
+            gameState.LogState();
+        }
         
 
         if (current_player.playerType == PlayerType.AI_Random){
@@ -145,6 +158,8 @@ public class GameManager : MonoBehaviour
                 }  
             }
         }
+
+
     }
 
     // Playability check specific to Uno rules
@@ -178,11 +193,7 @@ public class GameManager : MonoBehaviour
                     return currentCard.color == lastCardData.color || currentCard.value == lastCardData.value;
                 }
 
-                
-
-
-
-                
+             
             }
 
             return false;
@@ -268,5 +279,22 @@ public class GameManager : MonoBehaviour
 
         StartTurn();
 
+    }
+
+
+    public GameStateUno getGameState(){
+        int deckCardCount = deck.Count;
+        List<int> otherPlayersHandCardCounts = new List<int>();
+        foreach (Player player in all_players){
+            if (player != current_player){
+                otherPlayersHandCardCounts.Add(player.HandCardObjects.Count);
+            }
+        }
+
+        List<UnoCardData> playerHandCards = new List<UnoCardData>();
+        foreach (GameObject go in current_player.HandCardObjects){
+            playerHandCards.Add((UnoCardData)go.GetComponent<Card>().cardData);
+        }
+        return new GameStateUno(deckCardCount, otherPlayersHandCardCounts, playerHandCards);
     }
 }
