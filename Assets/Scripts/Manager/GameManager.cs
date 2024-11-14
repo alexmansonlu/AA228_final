@@ -33,9 +33,11 @@ public class GameManager : MonoBehaviour
     UnoColor saved_Color = UnoColor.Red;
 
     [SerializeField] ColorPickerManager colorPickerManager;
+    [SerializeField] PlayerType myPlayerType = PlayerType.Human;
 
 
-
+    // tcp server
+    private TCPServer tcpServer;
 
 
 
@@ -50,12 +52,21 @@ public class GameManager : MonoBehaviour
     }
 
     private void InitializeGame()
-    {
+    {   
+        // open tcp server
+        // Start the TCP server on port 8080
+        tcpServer = gameObject.AddComponent<TCPServer>();
+        tcpServer.StartServer(8080,this);
+
+
+
         if (currentGame == GameType.Uno)
         {
             SetupUnoGame();
         }
         // Additional setup for other games can go here
+
+
     }
 
     private void SetupUnoGame()
@@ -71,7 +82,7 @@ public class GameManager : MonoBehaviour
         //DrawInitialPublicCard();
 
         // Initialize player with a hand of Uno cards
-        player = new Player(handAreas[0],PlayerType.Human, "Me");
+        player = new Player(handAreas[0],myPlayerType, "Me");
         all_players.Add(player);
         //player.DrawInitialHand(deck, cardPrefab, 7); // Draw 7 cards as starting hand
 
@@ -86,7 +97,24 @@ public class GameManager : MonoBehaviour
             player.DrawInitialHand(deck, cardPrefab, 7); // Draw 7 cards as starting hand
         }
 
-        StartTurn();
+        if(player.playerType != PlayerType.AI_RL){
+            StartTurn(); //don't start the turn when player is RL, wait until the server is connected
+        }
+        else{
+            Debug.Log("Waiting for server connection...");
+        }
+
+        
+    }
+
+    // start the game as RL
+    public void StartRLGame(){
+        if(player.playerType == PlayerType.AI_RL){
+            StartTurn(); 
+        }
+        else{
+            Debug.LogWarning("Player is not AI_RL, no need to connect the server");
+        }
     }
 
     private void DrawInitialPublicCard()
@@ -115,34 +143,80 @@ public class GameManager : MonoBehaviour
         Debug.Log(current_player.name+" turn!");
         Boolean no_card_to_play = true;
         // remove while loop for other rules
-        while (no_card_to_play){
-            foreach (GameObject cardObject in current_player.HandCardObjects)
-            {
-                Card cardComponent = cardObject.GetComponent<Card>();
-                cardComponent.isPlayable = CheckPlayability(cardComponent);
-                if(no_card_to_play && cardComponent.isPlayable){
-                    no_card_to_play = false;
-                }
 
-                if(current_player.playerType == PlayerType.Human){
-                    //Debug.Log("can play: " + cardComponent.isPlayable);
-                    cardObject.GetComponentInChildren<CardGUI>().SetCanPlay(cardComponent.isPlayable);
-                }
+        // below is for drawing until a playable card rules!!!
+        // while (no_card_to_play){
+        //     foreach (GameObject cardObject in current_player.HandCardObjects)
+        //     {
+        //         Card cardComponent = cardObject.GetComponent<Card>();
+        //         cardComponent.isPlayable = CheckPlayability(cardComponent);
+        //         if(no_card_to_play && cardComponent.isPlayable){
+        //             no_card_to_play = false;
+        //         }
+
+        //         if(current_player.playerType == PlayerType.Human || current_player.playerType == PlayerType.AI_RL){
+        //             //Debug.Log("can play: " + cardComponent.isPlayable);
+        //             cardObject.GetComponentInChildren<CardGUI>().SetCanPlay(cardComponent.isPlayable);
+        //         }
+        //     }
+
+        //     if (no_card_to_play){
+        //         Debug.Log(current_player.name+" has no playable cards. Drawing a card.");
+        //         current_player.DrawCard(deck, cardPrefab);
+
+        //     }
+        // }
+
+        //Rule of drawing one card if no playable card, if the card can be played it will automatically play it, if not skip the turn
+        foreach (GameObject cardObject in current_player.HandCardObjects)
+        {
+            Card cardComponent = cardObject.GetComponent<Card>();
+            cardComponent.isPlayable = CheckPlayability(cardComponent);
+            if(no_card_to_play && cardComponent.isPlayable){
+                no_card_to_play = false;
             }
+
+            if(current_player.playerType == PlayerType.Human || current_player.playerType == PlayerType.AI_RL){
+                //Debug.Log("can play: " + cardComponent.isPlayable);
+                cardObject.GetComponentInChildren<CardGUI>().SetCanPlay(cardComponent.isPlayable);
+            }
+        }
 
             if (no_card_to_play){
                 Debug.Log(current_player.name+" has no playable cards. Drawing a card.");
                 current_player.DrawCard(deck, cardPrefab);
+                //check the last card
+                Card lastCard = current_player.HandCardObjects[current_player.HandCardObjects.Count-1].GetComponent<Card>();
+                lastCard.isPlayable = CheckPlayability(lastCard);
+                if (!lastCard.isPlayable){
+                    //skip turn if the last card is not playable
+                    Debug.Log(current_player.name+ " draw a card but it is not playable. Skipping turn.");
+                    StartTurn();
+                    return;
+                }
+
             }
-        }
         
         if (current_player.playerType == PlayerType.Human){
             // Human player play HERE
-
+            
             // maybe provided the state here
-            Debug.Log(current_player.name+" has no playable cards. Drawing a card.");
             GameStateUno gameState = getGameState();
             gameState.LogState();
+
+        }
+
+        if (current_player.playerType == PlayerType.AI_RL){
+            // Random AI play HERE
+            GameStateUno gameState = getGameState();
+            gameState.LogState();
+            string encodedState = gameState.EncodeState();
+
+            // here please call the function to send TCP 
+            // Send encoded data over TCP
+            Debug.Log("Sending encoded state: " + encodedState);
+            tcpServer.SendData(encodedState);
+            Debug.Log("Waiting for response...");
         }
         
 
@@ -158,6 +232,8 @@ public class GameManager : MonoBehaviour
                 }  
             }
         }
+
+
 
 
     }
@@ -202,8 +278,12 @@ public class GameManager : MonoBehaviour
         return false;
     }
 
+    public void EndGame(){
+        Debug.Log("Game Over");
+    }
+
     // Function to play a card and add it to the public pile
-    public void PlayCard(Card card)
+    public void PlayCard(Card card, UnoColor chosenColor = UnoColor.Wild)
     {
         if (CheckPlayability(card))
         {
@@ -216,6 +296,12 @@ public class GameManager : MonoBehaviour
             Player cardplayer = card.owner;
             cardplayer.HandCardObjects.Remove(card.gameObject); // Remove card GameObject from player's hand
             
+            //check win
+            if (cardplayer.HandCardObjects.Count == 0){
+                Debug.Log("Player " + cardplayer.name + " wins!");
+                EndGame();
+                return;
+            }
 
             Debug.Log($"{cardplayer.name} Played {card.GetType().Name} - {((UnoCard)card).color} {((UnoCard)card).value}");
 
@@ -233,20 +319,27 @@ public class GameManager : MonoBehaviour
                         int randomIndex = UnityEngine.Random.Range(0, 4);
                         colorPick((UnoColor)Enum.GetValues(typeof(UnoColor)).GetValue(randomIndex));
                     }
+                    else if (cardplayer.playerType == PlayerType.AI_RL){
+                        colorPick(chosenColor);
+                    }
 
                 }
                 else{
                     colorPickerManager.updateColorIndicator(((UnoCard)card).color);
                     Destroy(card.gameObject); // Destroy the card GameObject
-                    // After a successful play, draw a new card if the deck isn¡¦t empty
+                    // After a successful play, draw a new card if the deck isn't empty
 
 
                     StartTurn(); // Start the next turn
+
+
                 }
 
-                if (cardplayer.playerType == PlayerType.Human){
+                if (cardplayer.playerType == PlayerType.Human || cardplayer.playerType == PlayerType.AI_RL){
                     cardplayer.TidyHand();
                 }
+
+                
             }
 
             
@@ -254,7 +347,9 @@ public class GameManager : MonoBehaviour
         }
         else
         {
-            Debug.Log("ERROR: This card cannot be played.");
+            Debug.LogWarning("ERROR: This card cannot be played. Please check the RL model");
+
+            // maybe resent the state to the server
         }
 
         
@@ -295,6 +390,34 @@ public class GameManager : MonoBehaviour
         foreach (GameObject go in current_player.HandCardObjects){
             playerHandCards.Add((UnoCardData)go.GetComponent<Card>().cardData);
         }
-        return new GameStateUno(deckCardCount, otherPlayersHandCardCounts, playerHandCards);
+
+        List<UnoCardData> publicCards = new List<UnoCardData>();
+        foreach (CardData cd in publicPile){
+            publicCards.Add((UnoCardData)cd);
+        }
+
+        //get current color and valu
+        UnoCardData lastCardData = publicPile[publicPile.Count - 1] as UnoCardData;
+        int currentColor = (int)saved_Color; // Cast saved_Color to int
+        
+
+
+
+        return new GameStateUno(deckCardCount, otherPlayersHandCardCounts, playerHandCards, publicCards,currentColor);
+    }
+
+
+    // function for our agent to play card:
+    public void AutoPlayCard(int cardIndex, int colorIndex){
+        Debug.Log("Response recieved: Auto play card called with index: " + cardIndex + " and color index: " + colorIndex);
+        // only for ai rl
+        if(current_player.playerType != PlayerType.AI_RL){
+            Debug.LogWarning("ERROR: Is not an AI_RL player!");
+            return;
+        }
+
+        Card card = current_player.HandCardObjects[cardIndex].GetComponent<Card>();
+        PlayCard(card, (UnoColor)Enum.GetValues(typeof(UnoColor)).GetValue(colorIndex));
+
     }
 }

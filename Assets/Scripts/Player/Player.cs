@@ -25,7 +25,7 @@ public class Player
         {
             DrawCard(deck, cardPrefab);
         }
-        if (playerType == PlayerType.Human){
+        if (playerType == PlayerType.Human || playerType == PlayerType.AI_RL){
             TidyHand();
         }
         
@@ -62,7 +62,7 @@ public class Player
             UnityEngine.Debug.LogError("Deck is empty");
         }
 
-        if(playerType == PlayerType.Human){
+        if(playerType == PlayerType.Human || playerType == PlayerType.AI_RL){
             TidyHand();
         }
     }
