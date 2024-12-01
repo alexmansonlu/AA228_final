@@ -95,8 +95,8 @@ def main():
                     print(game_state)
 
                     # return a action
-                    action = play_card(0)
-                    client_socket.sendall(action.encode("utf-8"))
+                    # action = play_card(0)
+                    # client_socket.sendall(action.encode("utf-8"))
 
             except BlockingIOError:
                 # No data available; continue looping

@@ -182,20 +182,20 @@ public class GameManager : MonoBehaviour
             }
         }
 
-            if (no_card_to_play){
-                Debug.Log(current_player.name+" has no playable cards. Drawing a card.");
-                current_player.DrawCard(deck, cardPrefab);
-                //check the last card
-                Card lastCard = current_player.HandCardObjects[current_player.HandCardObjects.Count-1].GetComponent<Card>();
-                lastCard.isPlayable = CheckPlayability(lastCard);
-                if (!lastCard.isPlayable){
-                    //skip turn if the last card is not playable
-                    Debug.Log(current_player.name+ " draw a card but it is not playable. Skipping turn.");
-                    StartTurn();
-                    return;
-                }
-
+        if (no_card_to_play){
+            Debug.Log(current_player.name+" has no playable cards. Drawing a card.");
+            current_player.DrawCard(deck, cardPrefab);
+            //check the last card
+            Card lastCard = current_player.HandCardObjects[current_player.HandCardObjects.Count-1].GetComponent<Card>();
+            lastCard.isPlayable = CheckPlayability(lastCard);
+            if (!lastCard.isPlayable){
+                //skip turn if the last card is not playable
+                Debug.Log(current_player.name+ " draw a card but it is not playable. Skipping turn.");
+                StartTurn();
+                return;
             }
+
+        }
         
         if (current_player.playerType == PlayerType.Human){
             // Human player play HERE
@@ -334,7 +334,7 @@ public class GameManager : MonoBehaviour
 
 
                 }
-
+            
                 if (cardplayer.playerType == PlayerType.Human || cardplayer.playerType == PlayerType.AI_RL){
                     cardplayer.TidyHand();
                 }
@@ -387,8 +387,10 @@ public class GameManager : MonoBehaviour
         }
 
         List<UnoCardData> playerHandCards = new List<UnoCardData>();
+        List<int> isPlayable = new List<int>();
         foreach (GameObject go in current_player.HandCardObjects){
             playerHandCards.Add((UnoCardData)go.GetComponent<Card>().cardData);
+            isPlayable.Add(go.GetComponent<Card>().isPlayable ? 1 : 0);
         }
 
         List<UnoCardData> publicCards = new List<UnoCardData>();

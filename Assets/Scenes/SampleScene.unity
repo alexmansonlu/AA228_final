@@ -1956,6 +1956,7 @@ MonoBehaviour:
   publicCardPrefab: {fileID: 1891656989358409621, guid: 3beaca883a751de44a31a3e98f7a27c8, type: 3}
   publicCardArea: {fileID: 1697173321}
   colorPickerManager: {fileID: 699997627}
+  myPlayerType: 0
 --- !u!4 &1423093584
 Transform:
   m_ObjectHideFlags: 0

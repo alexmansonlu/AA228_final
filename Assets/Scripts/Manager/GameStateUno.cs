@@ -11,6 +11,7 @@ public class GameStateUno
     public List<UnoCardData> PlayerHandCards; 
     public List<UnoCardData> PublicPile; 
     public int CurrentColor;
+   
 
 
     public GameStateUno(int deckCardCount, List<int> otherPlayersHandCardCounts, List<UnoCardData> playerHandCards, List<UnoCardData> publicPile, int currentColor = 0)
