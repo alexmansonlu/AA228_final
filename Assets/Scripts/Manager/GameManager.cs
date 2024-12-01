@@ -86,8 +86,8 @@ public class GameManager : MonoBehaviour
         all_players.Add(player);
         //player.DrawInitialHand(deck, cardPrefab, 7); // Draw 7 cards as starting hand
 
-        string[] playerNames = {"Player A", "Player B", "Player C"};
-        for (int i = 0; i < 3; i++){
+        string[] playerNames = {"Player A", "Player B"};
+        for (int i = 0; i < 2; i++){
             Player player_simulated = new Player(handAreas[i+1],PlayerType.AI_Random, playerNames[i]);
             all_players.Add(player_simulated);
         }
