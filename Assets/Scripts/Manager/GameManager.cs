@@ -31,6 +31,7 @@ public class GameManager : MonoBehaviour
     [SerializeField] private Transform publicCardArea; 
 
     UnoColor saved_Color = UnoColor.Red;
+    private bool reverse_flag = false;  // Tells us if we should go in counter-clockwise or clockwise ordering
 
     [SerializeField] ColorPickerManager colorPickerManager;
     [SerializeField] PlayerType myPlayerType = PlayerType.Human;
@@ -82,14 +83,17 @@ public class GameManager : MonoBehaviour
         //DrawInitialPublicCard();
 
         // Initialize player with a hand of Uno cards
-        player = new Player(handAreas[0],myPlayerType, "Me");
+        player = new Player(handAreas[0],myPlayerType, "Agent");
         all_players.Add(player);
         //player.DrawInitialHand(deck, cardPrefab, 7); // Draw 7 cards as starting hand
 
-        string[] playerNames = {"Player A", "Player B", "Player C"};
-        for (int i = 0; i < 3; i++){
+        string[] playerNames = {"Player A", "Player B"};
+        for (int i = 0; i < 2; i++){
             Player player_simulated = new Player(handAreas[i+1],PlayerType.AI_Random, playerNames[i]);
             all_players.Add(player_simulated);
+
+            // Player player_human = new Player(handAreas[i+1],PlayerType.AI_Random, playerNames[i]);
+            // all_players.Add(player_human);
         }
 
         foreach (Player player in all_players)
@@ -129,7 +133,16 @@ public class GameManager : MonoBehaviour
 
     public void StartTurn()
     {   
-        turnCount++;
+        if (reverse_flag == false) {
+            turnCount++;  
+        }
+
+        else {
+            turnCount--; // Go in reverse order for players
+            if (turnCount < 0) {
+                turnCount += all_players.Count;  // Have to do this to avoid negative turnCount indexing with reverse
+            }
+        }
         
         // draw card if needed(not for uno)
         // if (deck.Count > 0)
@@ -252,8 +265,7 @@ public class GameManager : MonoBehaviour
 
             if (lastCardData != null && currentCard != null)
             {   
-                Debug.Log("last card: " + lastCardData.color + " " + lastCardData.value);
-                Debug.Log("current card: " + currentCard.color + " " + currentCard.value);
+                // Debug.Log(all_players[(turnCount - 1) % all_players.Count] + " last card: " + lastCardData.color + " " + lastCardData.value);
                 if (currentCard.color == UnoColor.Wild)
                 {
                     return true;
@@ -285,6 +297,7 @@ public class GameManager : MonoBehaviour
     // Function to play a card and add it to the public pile
     public void PlayCard(Card card, UnoColor chosenColor = UnoColor.Wild)
     {
+        Debug.Log("Turn Counter: " + turnCount);
         if (CheckPlayability(card))
         {
             // Add the card's data to the public pile
@@ -323,12 +336,48 @@ public class GameManager : MonoBehaviour
                         colorPick(chosenColor);
                     }
 
+                    Destroy(card.gameObject); // Haven't tested, could be buggy
                 }
                 else{
+
+                    // Case of Skip
+                    if (((UnoCard)card).value == UnoValue.Skip) {
+                        if (reverse_flag) {
+                            turnCount--;
+                            if (turnCount < 0) {
+                                turnCount += all_players.Count;  // Out of bounds check
+                            }
+                        }
+
+                        else {
+                            turnCount++;
+                        }
+                        
+                        Debug.Log("Player " + all_players[turnCount % all_players.Count].name + " has been skipped!");
+                    }
+
+                    // Case of Reverse
+                    if (((UnoCard)card).value == UnoValue.Reverse) {
+                        if (reverse_flag) {
+                            reverse_flag = false;
+                            Debug.Log("Player " + cardplayer.name + " has reversed the direction of play! Direction of player: clockwise");
+                        }
+
+                        else {
+                            reverse_flag = true;
+                            Debug.Log("Player " + cardplayer.name + " has reversed the direction of play! Direction of player: counter-clockwise");
+                        }
+                    }
+
+                    if (((UnoCard)card).value == UnoValue.DrawTwo) {
+                        // do something
+                    }
+
+
+
                     colorPickerManager.updateColorIndicator(((UnoCard)card).color);
                     Destroy(card.gameObject); // Destroy the card GameObject
                     // After a successful play, draw a new card if the deck isn't empty
-
 
                     StartTurn(); // Start the next turn
 
@@ -338,7 +387,6 @@ public class GameManager : MonoBehaviour
                 if (cardplayer.playerType == PlayerType.Human || cardplayer.playerType == PlayerType.AI_RL){
                     cardplayer.TidyHand();
                 }
-
                 
             }
 
@@ -398,7 +446,7 @@ public class GameManager : MonoBehaviour
             publicCards.Add((UnoCardData)cd);
         }
 
-        //get current color and valu
+        //get current color and value
         UnoCardData lastCardData = publicPile[publicPile.Count - 1] as UnoCardData;
         int currentColor = (int)saved_Color; // Cast saved_Color to int
         
