@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using UnityEngine;
 
-public class Player
+public class Player: MonoBehaviour
 {
     // List of card GameObjects in the player's hand
     public List<GameObject> HandCardObjects { get; private set; }
@@ -37,7 +37,7 @@ public class Player
         if (deck.Count > 0)
         {
             CardData cardData = deck[0]; // Retrieve card data (color, value, etc.)
-            UnityEngine.Debug.Log(name+" drawing card: " + cardData.cardType + " " + ((UnoCardData)cardData).value + " " + ((UnoCardData)cardData).color);
+            //UnityEngine.Debug.Log(name+" drawing card: " + cardData.cardType + " " + ((UnoCardData)cardData).value + " " + ((UnoCardData)cardData).color);
             deck.RemoveAt(0);
 
             // Instantiate the card prefab in the hand area
@@ -88,5 +88,15 @@ public class Player
             cardTransform.anchoredPosition = new Vector2(xPos, 0);
             cardTransform.localRotation = Quaternion.identity; // Reset rotation if needed
         }
+    }
+
+    public void resetHand(){
+        UnityEngine.Debug.Log(HandCardObjects.Count);
+        foreach (GameObject cardObject in HandCardObjects){
+            Destroy(cardObject);
+            UnityEngine.Debug.Log("hello 1"+name);
+        }
+
+        HandCardObjects = new List<GameObject>();
     }
 }

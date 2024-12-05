@@ -36,6 +36,11 @@ public class GameManager : MonoBehaviour
     [SerializeField] ColorPickerManager colorPickerManager;
     [SerializeField] PlayerType myPlayerType = PlayerType.Human;
 
+    [SerializeField] private List<int> scores;
+    [SerializeField] private List<int> cardLefts;
+    [SerializeField] private int maxRound = 10;
+    int currentRound = 0; 
+
 
     // tcp server
     private TCPServer tcpServer;
@@ -49,6 +54,9 @@ public class GameManager : MonoBehaviour
         else
             Destroy(gameObject);
 
+        scores = new List<int>{0,0,0}; // Initialize the scores list
+        cardLefts = new List<int>{0,0,0};
+
         InitializeGame();
     }
 
@@ -56,9 +64,21 @@ public class GameManager : MonoBehaviour
     {   
         // open tcp server
         // Start the TCP server on port 8080
-        tcpServer = gameObject.AddComponent<TCPServer>();
-        tcpServer.StartServer(8080,this);
+        // tcpServer = gameObject.AddComponent<TCPServer>();
+        // tcpServer.StartServer(8080,this);
 
+        currentRound++;
+        if(currentRound>=maxRound){
+            Debug.Log("Game end, the score is: " + scores);
+            Debug.Log("Card lefts are " + cardLefts);
+            Debug.Log("win rate is " + scores[0]/(scores[0]+scores[1]+scores[2]));
+            return;
+        }
+        else{
+            Debug.Log("Round: " + currentRound);
+
+            
+        }
 
 
         if (currentGame == GameType.Uno)
@@ -83,22 +103,26 @@ public class GameManager : MonoBehaviour
         //DrawInitialPublicCard();
 
         // Initialize player with a hand of Uno cards
-        player = new Player(handAreas[0],myPlayerType, "Agent");
-        all_players.Add(player);
-        //player.DrawInitialHand(deck, cardPrefab, 7); // Draw 7 cards as starting hand
+        if(all_players.Count == 0){
+            player = new Player(handAreas[0],myPlayerType, "Agent");
+            all_players.Add(player);
+            //player.DrawInitialHand(deck, cardPrefab, 7); // Draw 7 cards as starting hand
 
-        string[] playerNames = {"Player A", "Player B"};
-        for (int i = 0; i < 2; i++){
-            Player player_simulated = new Player(handAreas[i+1],PlayerType.AI_Random, playerNames[i]);
-            all_players.Add(player_simulated);
+            string[] playerNames = {"Player A", "Player B"};
+            for (int i = 0; i < 2; i++){
+                Player player_simulated = new Player(handAreas[i+1],PlayerType.AI_Random, playerNames[i]);
+                all_players.Add(player_simulated);
 
-            // Player player_human = new Player(handAreas[i+1],PlayerType.AI_Random, playerNames[i]);
-            // all_players.Add(player_human);
+                // Player player_human = new Player(handAreas[i+1],PlayerType.AI_Random, playerNames[i]);
+                // all_players.Add(player_human);
+            }
         }
 
         foreach (Player player in all_players)
         {
             player.DrawInitialHand(deck, cardPrefab, 7); // Draw 7 cards as starting hand
+
+            
         }
 
         if(player.playerType != PlayerType.AI_RL){
@@ -208,6 +232,10 @@ public class GameManager : MonoBehaviour
                 return;
             }
 
+            lastCard.GetComponentInChildren<CardGUI>().SetCanPlay(lastCard.isPlayable);
+
+            Debug.Log(current_player.name+ " can play the newly drawn card please play it.");
+
         }
         
         if (current_player.playerType == PlayerType.Human){
@@ -293,12 +321,30 @@ public class GameManager : MonoBehaviour
 
     public void EndGame(){
         Debug.Log("Game Over");
+
+        // clean up all the handcard and public card objects
+        foreach (Player player in all_players){
+            player.resetHand();
+
+        }
+
+        foreach (GameObject cardObject in publicCardObjects){
+            Destroy(cardObject);
+        }
+
+        publicCardObjects= new List<GameObject>();
+        publicPile = new List<CardData>();
+        deck = new List<CardData>();
+        reverse_flag = false;
+        turnCount = 0;
+
+        InitializeGame();
     }
 
     // Function to play a card and add it to the public pile
     public void PlayCard(Card card, UnoColor chosenColor = UnoColor.Wild)
     {
-        Debug.Log("Turn Counter: " + turnCount);
+        //Debug.Log("Turn Counter: " + turnCount);
         if (CheckPlayability(card))
         {
             // Add the card's data to the public pile
@@ -313,6 +359,14 @@ public class GameManager : MonoBehaviour
             //check win
             if (cardplayer.HandCardObjects.Count == 0){
                 Debug.Log("Player " + cardplayer.name + " wins!");
+                int index = all_players.IndexOf(cardplayer);
+                scores[index]++; //update score
+
+                for (int i = 0; i < all_players.Count; i++){
+                    cardLefts[i] += all_players[i].HandCardObjects.Count;
+                }
+                
+                Destroy(card.gameObject);
                 EndGame();
                 return;
             }
@@ -379,15 +433,17 @@ public class GameManager : MonoBehaviour
                     colorPickerManager.updateColorIndicator(((UnoCard)card).color);
                     Destroy(card.gameObject); // Destroy the card GameObject
                     // After a successful play, draw a new card if the deck isn't empty
-
+                    cardplayer.TidyHand();
                     StartTurn(); // Start the next turn
 
 
                 }
             
-                if (cardplayer.playerType == PlayerType.Human || cardplayer.playerType == PlayerType.AI_RL){
-                    cardplayer.TidyHand();
-                }
+                // if (cardplayer.playerType == PlayerType.Human || cardplayer.playerType == PlayerType.AI_RL){
+                //     cardplayer.TidyHand();
+                // }
+
+                
                 
             }
 
