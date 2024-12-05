@@ -61,6 +61,8 @@ class Belief:
         """
         self.remaining_deck_count = self._generate_recording_deck()
         self.beta_distributions = {card: [1, 1] for card in self.remaining_deck_count.keys()}
+        
+        # Tracks cards we know an opponent does not have
         self.cannot_play_flags = defaultdict(bool)  # Tracks cards the opponent cannot play.
 
         self.cannot_play_weight = 0.3

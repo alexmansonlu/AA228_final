@@ -153,7 +153,7 @@ public class GameManager : MonoBehaviour
 
         // check current player's hand for playable cards
         current_player = all_players[turnCount % all_players.Count];
-        Debug.Log(current_player.name+" turn!");
+        Debug.Log(current_player.name+"'s turn!");
         Boolean no_card_to_play = true;
         // remove while loop for other rules
 
@@ -221,15 +221,8 @@ public class GameManager : MonoBehaviour
 
         if (current_player.playerType == PlayerType.AI_RL){
             // Random AI play HERE
-            GameStateUno gameState = getGameState();
+            GameStateUno gameState = getGameState();  // States
             gameState.LogState();
-            string encodedState = gameState.EncodeState();
-
-            // here please call the function to send TCP 
-            // Send encoded data over TCP
-            Debug.Log("Sending encoded state: " + encodedState);
-            tcpServer.SendData(encodedState);
-            Debug.Log("Waiting for response...");
         }
         
 
@@ -449,11 +442,14 @@ public class GameManager : MonoBehaviour
         //get current color and value
         UnoCardData lastCardData = publicPile[publicPile.Count - 1] as UnoCardData;
         int currentColor = (int)saved_Color; // Cast saved_Color to int
+
+        // get direction of play
+        bool is_clockwise = !reverse_flag;
         
 
 
 
-        return new GameStateUno(deckCardCount, otherPlayersHandCardCounts, playerHandCards, publicCards,currentColor);
+        return new GameStateUno(deckCardCount, otherPlayersHandCardCounts, playerHandCards, publicCards,currentColor, is_clockwise);
     }
 
 

@@ -11,16 +11,18 @@ public class GameStateUno
     public List<UnoCardData> PlayerHandCards; 
     public List<UnoCardData> PublicPile; 
     public int CurrentColor;
+    public bool Clockwise;  // Gives us the order of play
    
 
 
-    public GameStateUno(int deckCardCount, List<int> otherPlayersHandCardCounts, List<UnoCardData> playerHandCards, List<UnoCardData> publicPile, int currentColor = 0)
+    public GameStateUno(int deckCardCount, List<int> otherPlayersHandCardCounts, List<UnoCardData> playerHandCards, List<UnoCardData> publicPile, int currentColor = 0, bool order = true)
     {
         DeckCardCount = deckCardCount;
         OtherPlayersHandCardCounts = otherPlayersHandCardCounts;
         PlayerHandCards = playerHandCards;
         PublicPile = publicPile;
         CurrentColor = currentColor;
+        Clockwise = order;
     }
 
     // Method to log the state
@@ -46,16 +48,12 @@ public class GameStateUno
 
         stateInfo += $"Current Color: {CurrentColor}\n";
 
+        stateInfo += $"Rotation of play is clockwise: {Clockwise}\n";
+
         // Use Debug.Log to print the information
         Debug.Log(stateInfo);
 
        
-    }
-
-    public string EncodeState()
-    {
-        // Serialize the object to a JSON string
-        return JsonUtility.ToJson(this);
     }
 }
 
