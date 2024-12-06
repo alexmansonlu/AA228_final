@@ -223,6 +223,14 @@ public class GameManager : MonoBehaviour
             // Random AI play HERE
             GameStateUno gameState = getGameState();  // States
             gameState.LogState();
+
+            // Call forward_search function here
+            
+            // Loop through every index and get the card that matches forward search's card. Do not return randomIndex, get correct Index
+            // Card current_card = current_player.HandCardObjects[randomIndex].GetComponent<Card>();
+
+            // PlayCard(current_card)
+
         }
         
 
