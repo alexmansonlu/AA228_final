@@ -96,7 +96,6 @@ public class Player: MonoBehaviour
             Destroy(cardObject);
             //UnityEngine.Debug.Log("hello 1"+name);
         }
-
-        HandCardObjects = new List<GameObject>();
+        HandCardObjects.Clear();
     }
 }

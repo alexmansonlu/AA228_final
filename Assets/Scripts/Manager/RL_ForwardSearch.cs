@@ -139,12 +139,12 @@ public class RL_ForwardSearch:MonoBehaviour
         // Get all possible actions (cards you can play)
         List<UnoCardData> playableCards = GetPlayableCards(state.PlayerHandCards, state);
         //Debug.Log("Current playable cards are: ");
-        state.LogState();
-        string s = "Current playable cards are: ";
-        foreach(var card in playableCards){
-            s += card.color + " " + card.value + ", ";
-        }
-        Debug.Log(s);
+        // state.LogState();
+        // string s = "Current playable cards are: ";
+        // foreach(var card in playableCards){
+        //     s += card.color + " " + card.value + ", ";
+        // }
+        // Debug.Log(s);
         
         float intermediateReward = 0f;
 

@@ -65,12 +65,6 @@ public class GameManager : MonoBehaviour
         
     }
 
-    IEnumerator waiter()
-    {
-        //Wait for 4 seconds
-        yield return new WaitForSeconds(1);
-
-    }
 
     private void Update(){
         if (startNewGame){
@@ -81,8 +75,7 @@ public class GameManager : MonoBehaviour
 
     private void InitializeGame()
     {      
-        // sleep for 1 second using Unity function
-        StartCoroutine(waiter());
+        
         
         // open tcp server
         // Start the TCP server on port 8080
@@ -93,7 +86,7 @@ public class GameManager : MonoBehaviour
         if(currentRound>=maxRound){
             Debug.Log("Game end, the score is: " + scores[0]+", "+scores[1]+", "+scores[2]);
             Debug.Log("Card lefts are " + cardLefts[0]+", "+cardLefts[1]+", "+cardLefts[2]);
-            Debug.Log("win rate is " + scores[0]/(scores[0]+scores[1]+scores[2]));
+            Debug.Log("win rate is " + (float)scores[0]/(float)(scores[0]+scores[1]+scores[2]));
             return;
         }
         else{
@@ -248,6 +241,11 @@ public class GameManager : MonoBehaviour
 
         if (no_card_to_play){
             Debug.Log(current_player.name+" has no playable cards. Drawing a card.");
+            if(deck.Count==0){
+                Debug.Log("Deck is empty. Game over.");
+                startNewGame = true;
+                return;
+            }
             current_player.DrawCard(deck, cardPrefab);
             //check the last card
             Card lastCard = current_player.HandCardObjects[current_player.HandCardObjects.Count-1].GetComponent<Card>();
@@ -289,7 +287,7 @@ public class GameManager : MonoBehaviour
 
             // PlayCard(current_card)
 
-            UnoCardData cd = rl_forward_search.ForwardSearch(gameState.Clone(),1);
+            UnoCardData cd = rl_forward_search.ForwardSearch(gameState.Clone(),2);
             Debug.Log("forward search result: " + cd.color + " " + cd.value);
 
             foreach (GameObject cardObject in current_player.HandCardObjects)
@@ -381,9 +379,10 @@ public class GameManager : MonoBehaviour
             Destroy(cardObject);
         }
 
-        publicCardObjects= new List<GameObject>();
-        publicPile = new List<CardData>();
-        deck = new List<CardData>();
+        deck.Clear();
+        publicPile.Clear();
+        publicCardObjects.Clear();
+
         reverse_flag = false;
         turnCount = UnityEngine.Random.Range(0, 3);;
 
@@ -542,15 +541,13 @@ public class GameManager : MonoBehaviour
         List<UnoCardData> OpponentAHandCards = new List<UnoCardData>(); 
         List<UnoCardData> OpponentBHandCards = new List<UnoCardData>(); 
         foreach (Player player in all_players){
-            if (player != current_player){
-
             if(player.name =="Player A"){
                 foreach(GameObject go in player.HandCardObjects){
                     OpponentAHandCards.Add((UnoCardData)go.GetComponent<Card>().cardData);
                 }
                 otherPlayersHandCardCounts[0] = (player.HandCardObjects.Count);
             }
-            }
+            
 
             if(player.name =="Player B"){
                 foreach(GameObject go in player.HandCardObjects){
