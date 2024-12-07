@@ -393,9 +393,45 @@ public class RL_ForwardSearch:MonoBehaviour
     */
     public float RewardFunction(GameStateUno state, UnoCardData action) {
 
-        // TODO: Implement reward functionhere
         float reward = 0.0f;
+
+        if (state.PlayerHandCardsCount == 0) {
+            return 1000f; 
+        }
+
+        // Penalize for # of cards in hand
+        reward -= state.PlayerHandCardsCount * 5f;
+
+        // use clockwise to skip if a player has 1 card 
+
+        // if asked to draw 
+        if (state.PublicPile[-1].value == UnoValue.DrawTwo || state.PublicPile[-1].value == UnoValue.WildDrawFour) {
+            // reward if stacked 
+            if (action.value == UnoValue.DrawTwo || action.value == UnoValue.WildDrawFour) {
+                List<UnoCardData> next_player_cards = state.Clockwise ? state.OpponentAHandCards : state.OpponentBHandCards;
+                reward += (10f / next_player_cards.Count); 
+            }
+            // penalize if forced to draw, penalized more if you have fewer cards 
+            else {
+                reward += (10f / state.PlayerHandCardsCount);
+            }
+        }
+        // penalize playing +2, +4 if unecessary 
+        else {
+            if (action.value == UnoValue.DrawTwo || action.value == UnoValue.WildDrawFour) {
+                reward -= 20f; 
+            }
+        }
+        
+        // penalize for playing wild card 
+        if (action.color == UnoColor.Wild) {
+            reward -= 20f; 
+        }
+
+        // penalize for # of cards opponent has
+        foreach (int opponentCards in state.OtherPlayersHandCardCounts) {
+            reward -= opponentCards * 5f; // Penalize for fewer opponent cards
+        }
         return reward;
     }
-
 }
