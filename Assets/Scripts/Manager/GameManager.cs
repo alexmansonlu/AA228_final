@@ -42,6 +42,9 @@ public class GameManager : MonoBehaviour
     int currentRound = 0; 
 
 
+    [SerializeField]  RL_ForwardSearch rl_forward_search;
+
+
     // tcp server
     private TCPServer tcpServer;
 
@@ -258,6 +261,10 @@ public class GameManager : MonoBehaviour
             // Card current_card = current_player.HandCardObjects[randomIndex].GetComponent<Card>();
 
             // PlayCard(current_card)
+
+            UnoCardData cd = rl_forward_search.forward_search(gameState.Clone(),3);
+
+
 
         }
         
@@ -485,9 +492,23 @@ public class GameManager : MonoBehaviour
     public GameStateUno getGameState(){
         int deckCardCount = deck.Count;
         List<int> otherPlayersHandCardCounts = new List<int>();
+        List<UnoCardData> OpponentAHandCards; 
+        List<UnoCardData> OpponentBHandCards; 
         foreach (Player player in all_players){
             if (player != current_player){
                 otherPlayersHandCardCounts.Add(player.HandCardObjects.Count);
+            }
+
+            if(player.name =="Player A"){
+                foreach(GameObject go in player.HandCardObjects){
+                    OpponentAHandCards.Add((UnoCardData)go.GetComponent<Card>().cardData);
+                }
+            }
+
+            if(player.name =="Player B"){
+                foreach(GameObject go in player.HandCardObjects){
+                    OpponentBHandCards.Add((UnoCardData)go.GetComponent<Card>().cardData);
+                }
             }
         }
 
@@ -513,7 +534,7 @@ public class GameManager : MonoBehaviour
 
 
 
-        return new GameStateUno(deckCardCount, otherPlayersHandCardCounts, playerHandCards, publicCards,currentColor, is_clockwise);
+        return new GameStateUno(deckCardCount, otherPlayersHandCardCounts, playerHandCards, publicCards,currentColor, is_clockwise, OpponentAHandCards, OpponentBHandCards);
     }
 
 

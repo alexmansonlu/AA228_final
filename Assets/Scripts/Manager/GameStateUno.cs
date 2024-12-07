@@ -7,15 +7,21 @@ using UnityEngine;
 public class GameStateUno
 {
     public int DeckCardCount;
-    public List<int> OtherPlayersHandCardCounts; 
+    
+    public List<int> OtherPlayersHandCardCounts;  // this is set as fake number since in rollout we ignore the card being drawn instead we jsut keep track of the final card number
+    public int PlayerHandCardsCount;// same here
+
+    public List<UnoCardData> OpponentAHandCards; 
+    public List<UnoCardData> OpponentBHandCards; 
     public List<UnoCardData> PlayerHandCards; 
     public List<UnoCardData> PublicPile; 
     public int CurrentColor;
+    
     public bool Clockwise;  // Gives us the order of play
    
 
 
-    public GameStateUno(int deckCardCount, List<int> otherPlayersHandCardCounts, List<UnoCardData> playerHandCards, List<UnoCardData> publicPile, int currentColor = 0, bool order = true)
+    public GameStateUno(int deckCardCount, List<int> otherPlayersHandCardCounts, List<UnoCardData> playerHandCards, List<UnoCardData> publicPile, int currentColor = 0, bool order = true, List<UnoCardData> opponentAHandCards = null, List<UnoCardData> opponentBHandCards = null)
     {
         DeckCardCount = deckCardCount;
         OtherPlayersHandCardCounts = otherPlayersHandCardCounts;
@@ -23,6 +29,9 @@ public class GameStateUno
         PublicPile = publicPile;
         CurrentColor = currentColor;
         Clockwise = order;
+
+        OpponentAHandCards = opponentAHandCards;
+        OpponentBHandCards = opponentBHandCards;
     }
 
     // Method to log the state
@@ -54,6 +63,24 @@ public class GameStateUno
         Debug.Log(stateInfo);
 
        
+    }
+
+    // to prevent using teh same game state over loop
+    public GameStateUno Clone()
+    {
+        // Create a new instance and copy the values over
+        GameStateUno clone = new GameStateUno(
+            this.DeckCardCount, 
+            new List<int>(this.OtherPlayersHandCardCounts), 
+            new List<UnoCardData>(this.PlayerHandCards), 
+            new List<UnoCardData>(this.PublicPile), 
+            this.CurrentColor, 
+            this.Clockwise,
+            new List<UnoCardData>(this.OpponentAHandCards),
+            new List<UnoCardData>(this.OpponentBHandCards)
+        );
+
+        return clone;
     }
 }
 
