@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using Photon.Pun.UtilityScripts;
 using System;
-
+using System.Collections;
 public class GameManager : MonoBehaviour
 {
     public static GameManager Instance;
@@ -40,9 +40,19 @@ public class GameManager : MonoBehaviour
     [SerializeField] ColorPickerManager colorPickerManager;
     [SerializeField] PlayerType myPlayerType = PlayerType.Human;
 
+    [SerializeField] private List<int> scores;
+    [SerializeField] private List<int> cardLefts;
+    [SerializeField] int maxRound = 100;
+    int currentRound = 0; 
+
+
+    [SerializeField]  RL_ForwardSearch rl_forward_search;
+
 
     // tcp server
     private TCPServer tcpServer;
+
+    bool startNewGame = true;
 
 
 
@@ -53,16 +63,41 @@ public class GameManager : MonoBehaviour
         else
             Destroy(gameObject);
 
-        InitializeGame();
+        scores = new List<int>{0,0,0}; // Initialize the scores list
+        cardLefts = new List<int>{0,0,0};
+
+        
+    }
+
+
+    private void Update(){
+        if (startNewGame){
+            startNewGame = false;
+            InitializeGame();
+        }
     }
 
     private void InitializeGame()
-    {   
+    {      
+        
+        
         // open tcp server
         // Start the TCP server on port 8080
-        tcpServer = gameObject.AddComponent<TCPServer>();
-        tcpServer.StartServer(8080,this);
+        // tcpServer = gameObject.AddComponent<TCPServer>();
+        // tcpServer.StartServer(8080,this);
 
+        currentRound++;
+        if(currentRound>=maxRound){
+            Debug.Log("Game end, the score is: " + scores[0]+", "+scores[1]+", "+scores[2]);
+            Debug.Log("Card lefts are " + cardLefts[0]+", "+cardLefts[1]+", "+cardLefts[2]);
+            Debug.Log("win rate is " + (float)scores[0]/(float)(scores[0]+scores[1]+scores[2]));
+            return;
+        }
+        else{
+            Debug.Log("Round: " + currentRound);
+
+            
+        }
 
 
         if (currentGame == GameType.Uno)
@@ -87,30 +122,36 @@ public class GameManager : MonoBehaviour
         //DrawInitialPublicCard();
 
         // Initialize player with a hand of Uno cards
-        player = new Player(handAreas[0],myPlayerType, "Agent");
-        all_players.Add(player);
-        //player.DrawInitialHand(deck, cardPrefab, 7); // Draw 7 cards as starting hand
+        if(all_players.Count == 0){
+            player = new Player(handAreas[0],myPlayerType, "Agent");
+            all_players.Add(player);
+            //player.DrawInitialHand(deck, cardPrefab, 7); // Draw 7 cards as starting hand
 
-        string[] playerNames = {"Player A", "Player B"};
-        for (int i = 0; i < 2; i++){
-            Player player_simulated = new Player(handAreas[i+1],PlayerType.AI_Random, playerNames[i]);
-            all_players.Add(player_simulated);
+            string[] playerNames = {"Player A", "Player B"};
+            for (int i = 0; i < 2; i++){
+                Player player_simulated = new Player(handAreas[i+1],PlayerType.AI_Random, playerNames[i]);
+                all_players.Add(player_simulated);
 
-            // Player player_human = new Player(handAreas[i+1],PlayerType.AI_Random, playerNames[i]);
-            // all_players.Add(player_human);
+                // Player player_human = new Player(handAreas[i+1],PlayerType.AI_Random, playerNames[i]);
+                // all_players.Add(player_human);
+            }
         }
 
         foreach (Player player in all_players)
         {
             player.DrawInitialHand(deck, cardPrefab, 7); // Draw 7 cards as starting hand
+
+            
         }
 
-        if(player.playerType != PlayerType.AI_RL){
-            StartTurn(); //don't start the turn when player is RL, wait until the server is connected
-        }
-        else{
-            Debug.Log("Waiting for server connection...");
-        }
+        // if(player.playerType != PlayerType.AI_RL){
+        //     StartTurn(); //don't start the turn when player is RL, wait until the server is connected
+        // }
+        // else{
+        //     Debug.Log("Waiting for server connection...");
+        // }
+
+        StartTurn();
 
         
     }
@@ -137,6 +178,9 @@ public class GameManager : MonoBehaviour
 
     public void StartTurn()
     {   
+        if (startNewGame){
+            return;
+        }
         if (reverse_flag == false) {
             turnCount++;  
         }
@@ -223,10 +267,13 @@ public class GameManager : MonoBehaviour
             GameStateUno gameState = getGameState();
             gameState.LogState();
 
+            // UnoCardData cd = rl_forward_search.ForwardSearch(gameState.Clone(),3);
+            // Debug.Log("forward search result: " + cd.color + " " + cd.value);
+
         }
 
         if (current_player.playerType == PlayerType.AI_RL){
-            // Random AI play HERE
+            // RL Agent play here
             GameStateUno gameState = getGameState();  // States
             gameState.LogState();
 
@@ -237,11 +284,30 @@ public class GameManager : MonoBehaviour
 
             // PlayCard(current_card)
 
+            UnoCardData cd = rl_forward_search.ForwardSearch(gameState.Clone(),2);
+            Debug.Log("forward search result: " + cd.color + " " + cd.value);
+
+            foreach (GameObject cardObject in current_player.HandCardObjects)
+            {
+                Card cardComponent = cardObject.GetComponent<Card>();
+                if (((UnoCard)cardComponent).color == cd.color && ((UnoCard)cardComponent).value == cd.value)
+                {      
+                    //Debug.Log("AI played " + ((UnoCard)cardComponent).color  + " " + ((UnoCard)cardComponent).value);
+                    PlayCard(cardComponent);
+                    break;
+                }
+            }
+
+
         }
+
+       
         
 
         if (current_player.playerType == PlayerType.AI_Random){
             // Random AI play HERE
+
+            if(current_player.HandCardObjects.Count == 0) return;
             while(true)
             {
                 int randomIndex = UnityEngine.Random.Range(0, current_player.HandCardObjects.Count);
@@ -337,14 +403,33 @@ public class GameManager : MonoBehaviour
 
     public void EndGame(){
         Debug.Log("Game Over");
+
+        // clean up all the handcard and public card objects
+        foreach (Player player in all_players){
+            player.resetHand();
+
+        }
+
+        foreach (GameObject cardObject in publicCardObjects){
+            Destroy(cardObject);
+        }
+
+        deck.Clear();
+        publicPile.Clear();
+        publicCardObjects.Clear();
+
+        reverse_flag = false;
+        turnCount = UnityEngine.Random.Range(0, 3);;
+
+        startNewGame = true;
     }
 
     // Function to play a card and add it to the public pile
-    public void PlayCard(Card card, UnoColor chosenColor = UnoColor.Wild)
+    public void PlayCard(Card card, UnoColor chosenColor = UnoColor.Red)
     {
         Player cardplayer = card.owner;
 
-        Debug.Log("Turn Counter: " + turnCount);
+        // Debug.Log("Turn Counter: " + turnCount);
         if (CheckPlayability(card))
         {
             // Add the card's data to the public pile
@@ -357,6 +442,19 @@ public class GameManager : MonoBehaviour
             //check win
             if (cardplayer.HandCardObjects.Count == 0){
                 Debug.Log("Player " + cardplayer.name + " wins!");
+                for (int i = 0; i < all_players.Count; i++){
+                    if(all_players[i].name == cardplayer.name){
+                        scores[i]++;
+                        break;
+                    }
+                }
+                //scores[index]++; //update score
+
+                for (int i = 0; i < all_players.Count; i++){
+                    cardLefts[i] += all_players[i].HandCardObjects.Count;
+                }
+                
+                Destroy(card.gameObject);
                 EndGame();
                 return;
             }
@@ -432,15 +530,17 @@ public class GameManager : MonoBehaviour
                     colorPickerManager.updateColorIndicator(((UnoCard)card).color);
                     Destroy(card.gameObject); // Destroy the card GameObject
                     // After a successful play, draw a new card if the deck isn't empty
-
+                    cardplayer.TidyHand();
                     StartTurn(); // Start the next turn
 
 
                 }
             
-                if (cardplayer.playerType == PlayerType.Human || cardplayer.playerType == PlayerType.AI_RL){
-                    cardplayer.TidyHand();
-                }
+                // if (cardplayer.playerType == PlayerType.Human || cardplayer.playerType == PlayerType.AI_RL){
+                //     cardplayer.TidyHand();
+                // }
+
+                
                 
             }
 
@@ -481,10 +581,24 @@ public class GameManager : MonoBehaviour
 
     public GameStateUno getGameState(){
         int deckCardCount = deck.Count;
-        List<int> otherPlayersHandCardCounts = new List<int>();
+        List<int> otherPlayersHandCardCounts = new List<int>{0,0};
+        List<UnoCardData> OpponentAHandCards = new List<UnoCardData>(); 
+        List<UnoCardData> OpponentBHandCards = new List<UnoCardData>(); 
         foreach (Player player in all_players){
-            if (player != current_player){
-                otherPlayersHandCardCounts.Add(player.HandCardObjects.Count);
+            if(player.name =="Player A"){
+                foreach(GameObject go in player.HandCardObjects){
+                    OpponentAHandCards.Add((UnoCardData)go.GetComponent<Card>().cardData);
+                }
+                otherPlayersHandCardCounts[0] = (player.HandCardObjects.Count);
+            }
+            
+
+            if(player.name =="Player B"){
+                foreach(GameObject go in player.HandCardObjects){
+                    OpponentBHandCards.Add((UnoCardData)go.GetComponent<Card>().cardData);
+                }
+
+                otherPlayersHandCardCounts[1] = (player.HandCardObjects.Count);
             }
         }
 
@@ -501,11 +615,19 @@ public class GameManager : MonoBehaviour
         }
 
         //get current color and value
-        UnoCardData lastCardData = publicPile[publicPile.Count - 1] as UnoCardData;
+        UnoCardData lastCardData ;
+        if(publicPile.Count == 0){
+            lastCardData=null;
+        }
+        else{
+            lastCardData =publicPile[publicPile.Count - 1] as UnoCardData;
+        }
         int currentColor = (int)saved_Color; // Cast saved_Color to int
 
         // get direction of play
         bool is_clockwise = !reverse_flag;
+        Debug.Log("therPlayersHandCardCounts: " + otherPlayersHandCardCounts.Count);
+
 
         // See if we should be playing draw two or draw four
         UnoCardData last_card = null;
@@ -513,8 +635,7 @@ public class GameManager : MonoBehaviour
             last_card = (UnoCardData)publicPile[publicPile.Count - 1];
         }
 
-        return new GameStateUno(deckCardCount, otherPlayersHandCardCounts, playerHandCards, 
-            publicCards,currentColor, is_clockwise, isDrawTwoActive, isDrawFourActive);
+        return new GameStateUno(deckCardCount, otherPlayersHandCardCounts, playerHandCards, publicCards,currentColor, is_clockwise, OpponentAHandCards, OpponentBHandCards);
     }
 
 
