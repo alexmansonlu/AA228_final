@@ -12,10 +12,13 @@ public class GameStateUno
     public List<UnoCardData> PublicPile; 
     public int CurrentColor;
     public bool Clockwise;  // Gives us the order of play
+    public bool D2Active;  // Was a Draw 2 the last card? If so play Draw-2 no matter what if we have.
+    public bool D4Active;  // Was a Draw 4 the last card? If so play Draw-4 no matter what if we have.
    
 
 
-    public GameStateUno(int deckCardCount, List<int> otherPlayersHandCardCounts, List<UnoCardData> playerHandCards, List<UnoCardData> publicPile, int currentColor = 0, bool order = true)
+    public GameStateUno(int deckCardCount, List<int> otherPlayersHandCardCounts, List<UnoCardData> playerHandCards, 
+        List<UnoCardData> publicPile, int currentColor = 0, bool order = true, bool d2Active = false, bool d4Active = false)
     {
         DeckCardCount = deckCardCount;
         OtherPlayersHandCardCounts = otherPlayersHandCardCounts;
@@ -23,6 +26,8 @@ public class GameStateUno
         PublicPile = publicPile;
         CurrentColor = currentColor;
         Clockwise = order;
+        D2Active = d2Active;
+        D4Active = d4Active;
     }
 
     // Method to log the state
@@ -49,6 +54,10 @@ public class GameStateUno
         stateInfo += $"Current Color: {CurrentColor}\n";
 
         stateInfo += $"Rotation of play is clockwise: {Clockwise}\n";
+
+        stateInfo += $"Draw two is active: {D2Active}\n";
+
+        stateInfo += $"Draw four is active: {D4Active}\n";
 
         // Use Debug.Log to print the information
         Debug.Log(stateInfo);

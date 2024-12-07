@@ -21,6 +21,10 @@ public class GameManager : MonoBehaviour
     public List<Player> all_players = new List<Player>();
     private Player player; // The single player in this game
     private int turnCount = 0; // Tracks how many turns have been played
+    private bool isDrawTwoActive = false; // Checks whether a draw two is active
+    private bool isDrawFourActive = false;
+    private int drawTwoPenalty = 0;
+    private int drawFourPenalty = 0;
 
     //current player
     Player current_player;
@@ -143,42 +147,11 @@ public class GameManager : MonoBehaviour
                 turnCount += all_players.Count;  // Have to do this to avoid negative turnCount indexing with reverse
             }
         }
-        
-        // draw card if needed(not for uno)
-        // if (deck.Count > 0)
-        // {   
-        //     all_players[turnCount % all_players.Count].DrawCard(deck, cardPrefab);
-        //     //player.DrawCard(deck, cardPrefab);
-        // }
 
         // check current player's hand for playable cards
         current_player = all_players[turnCount % all_players.Count];
         Debug.Log(current_player.name+"'s turn!");
         Boolean no_card_to_play = true;
-        // remove while loop for other rules
-
-        // below is for drawing until a playable card rules!!!
-        // while (no_card_to_play){
-        //     foreach (GameObject cardObject in current_player.HandCardObjects)
-        //     {
-        //         Card cardComponent = cardObject.GetComponent<Card>();
-        //         cardComponent.isPlayable = CheckPlayability(cardComponent);
-        //         if(no_card_to_play && cardComponent.isPlayable){
-        //             no_card_to_play = false;
-        //         }
-
-        //         if(current_player.playerType == PlayerType.Human || current_player.playerType == PlayerType.AI_RL){
-        //             //Debug.Log("can play: " + cardComponent.isPlayable);
-        //             cardObject.GetComponentInChildren<CardGUI>().SetCanPlay(cardComponent.isPlayable);
-        //         }
-        //     }
-
-        //     if (no_card_to_play){
-        //         Debug.Log(current_player.name+" has no playable cards. Drawing a card.");
-        //         current_player.DrawCard(deck, cardPrefab);
-
-        //     }
-        // }
 
         //Rule of drawing one card if no playable card, if the card can be played it will automatically play it, if not skip the turn
         foreach (GameObject cardObject in current_player.HandCardObjects)
@@ -195,19 +168,52 @@ public class GameManager : MonoBehaviour
             }
         }
 
+
+        UnoCardData last_card = null;
+        if (publicPile.Count > 0) {
+            last_card = publicPile[publicPile.Count - 1] as UnoCardData;
+        }
+        
         if (no_card_to_play){
-            Debug.Log(current_player.name+" has no playable cards. Drawing a card.");
-            current_player.DrawCard(deck, cardPrefab);
-            //check the last card
-            Card lastCard = current_player.HandCardObjects[current_player.HandCardObjects.Count-1].GetComponent<Card>();
-            lastCard.isPlayable = CheckPlayability(lastCard);
-            if (!lastCard.isPlayable){
-                //skip turn if the last card is not playable
-                Debug.Log(current_player.name+ " draw a card but it is not playable. Skipping turn.");
+            
+            // If no valid card to play on draw 2 when penalty is active, take the drawTwoPenalty
+            if (last_card != null && last_card.value == UnoValue.DrawTwo && isDrawTwoActive) {
+                for (int i = 0; i < drawTwoPenalty; i++) {
+                    current_player.DrawCard(deck, cardPrefab);
+                }
+                Debug.Log("Player " + current_player.name + " has drawn " + drawTwoPenalty + " cards!");
+                drawTwoPenalty = 0;
+                isDrawTwoActive = false;
+                StartTurn();  // Skip Turn
+                return;
+            }
+
+            // If no valid card to play on draw 4 when penalty is active, take the drawFourPenalty
+            else if (last_card != null && last_card.value == UnoValue.WildDrawFour && isDrawFourActive) {
+                for (int i = 0; i < drawFourPenalty; i++) {
+                    current_player.DrawCard(deck, cardPrefab);
+                }
+                Debug.Log("Player " + current_player.name + " has drawn " + drawFourPenalty + " cards!");
+                drawFourPenalty = 0;
+                isDrawFourActive = false;
                 StartTurn();
                 return;
             }
 
+            // Draw a card from deck, see if it is playable
+            else {
+                Debug.Log(current_player.name+" has no playable cards. Drawing a card.");
+                current_player.DrawCard(deck, cardPrefab);
+                //check the last card
+                Card lastCard = current_player.HandCardObjects[current_player.HandCardObjects.Count-1].GetComponent<Card>();
+                lastCard.isPlayable = CheckPlayability(lastCard);
+                if (!lastCard.isPlayable){
+                    //skip turn if the last card is not playable
+                    Debug.Log(current_player.name+ " draw a card but it is not playable. Skipping turn.");
+                    StartTurn();
+                    return;
+                }
+            }
         }
         
         if (current_player.playerType == PlayerType.Human){
@@ -223,6 +229,14 @@ public class GameManager : MonoBehaviour
             // Random AI play HERE
             GameStateUno gameState = getGameState();  // States
             gameState.LogState();
+
+            // Call forward_search function here
+            
+            // Loop through every index and get the card that matches forward search's card. Do not return randomIndex, get correct Index
+            // Card current_card = current_player.HandCardObjects[randomIndex].GetComponent<Card>();
+
+            // PlayCard(current_card)
+
         }
         
 
@@ -261,16 +275,54 @@ public class GameManager : MonoBehaviour
                 // Debug.Log(all_players[(turnCount - 1) % all_players.Count] + " last card: " + lastCardData.color + " " + lastCardData.value);
                 if (currentCard.color == UnoColor.Wild)
                 {
+                    // Restrict only non-Draw Four Wild cards when a Draw Four is active
+                    if (lastCardData.value == UnoValue.WildDrawFour && isDrawFourActive && currentCard.value != UnoValue.WildDrawFour) {
+                        return false;
+                    }
+
+                    // Restrict Wilds from being played if a Draw Two is active
+                    else if (lastCardData.value == UnoValue.DrawTwo && isDrawTwoActive && currentCard.value != UnoValue.DrawTwo) {
+                        return false;
+                    }
                     return true;
                 }
 
+                // Draw 4 Case:
+                if (lastCardData.value == UnoValue.WildDrawFour) {
+                    if (isDrawFourActive) {
+                        // Debug.Log("test A");
+                        return currentCard.value == UnoValue.WildDrawFour;
+                    }
 
-                if(lastCardData.color == UnoColor.Wild)
-                {
+                    else {
+                        // Debug.Log("test B");
+                        return currentCard.color == saved_Color;
+                    }
+                }
+
+                // Draw 2 Case:
+                else if (lastCardData.value == UnoValue.DrawTwo) {
+                    if (isDrawTwoActive) {
+                        // Debug.Log("test C");
+                        return currentCard.value == UnoValue.DrawTwo;
+                    }
+
+                    else {
+                        // Debug.Log("test D");
+                        return currentCard.color == lastCardData.color || currentCard.value == lastCardData.value;
+                    }
+                }
+                
+                // Wild Case:
+                else if (lastCardData.color == UnoColor.Wild) {
+                    // Debug.Log("test E");
                     return currentCard.color == saved_Color;
                 }
-                else{
+
+                // Not a Draw 4, Draw 2, or Wild
+                else {
                     // Basic Uno rule: Check if the card color or value matches
+                    // Debug.Log("test F");
                     return currentCard.color == lastCardData.color || currentCard.value == lastCardData.value;
                 }
 
@@ -290,6 +342,8 @@ public class GameManager : MonoBehaviour
     // Function to play a card and add it to the public pile
     public void PlayCard(Card card, UnoColor chosenColor = UnoColor.Wild)
     {
+        Player cardplayer = card.owner;
+
         Debug.Log("Turn Counter: " + turnCount);
         if (CheckPlayability(card))
         {
@@ -298,8 +352,6 @@ public class GameManager : MonoBehaviour
             GameObject publicCardObject = Instantiate(publicCardPrefab, publicCardArea);
             publicCardObject.GetComponentInChildren<CardGUI>().UpdateCardFace(card.cardData);
             publicCardObjects.Add(publicCardObject);
-
-            Player cardplayer = card.owner;
             cardplayer.HandCardObjects.Remove(card.gameObject); // Remove card GameObject from player's hand
             
             //check win
@@ -312,8 +364,16 @@ public class GameManager : MonoBehaviour
             Debug.Log($"{cardplayer.name} Played {card.GetType().Name} - {((UnoCard)card).color} {((UnoCard)card).value}");
 
             //post play card ability for uno
-            if (currentGame == GameType.Uno){
+            if (currentGame == GameType.Uno){    
+            
                 if (((UnoCard)card).color == UnoColor.Wild){
+
+                    // Draw four check
+                    if (((UnoCard)card).value == UnoValue.WildDrawFour) {
+                        Debug.Log("Test X");
+                        isDrawFourActive = true;
+                        drawFourPenalty += 4;
+                    }
                     colorPickerManager.updateColorIndicator(UnoColor.Wild);
                     if(cardplayer.playerType == PlayerType.Human){
                         // gonna choose a color
@@ -363,7 +423,8 @@ public class GameManager : MonoBehaviour
                     }
 
                     if (((UnoCard)card).value == UnoValue.DrawTwo) {
-                        // do something
+                        isDrawTwoActive = true;
+                        drawTwoPenalty += 2;
                     }
 
 
@@ -445,11 +506,15 @@ public class GameManager : MonoBehaviour
 
         // get direction of play
         bool is_clockwise = !reverse_flag;
-        
 
+        // See if we should be playing draw two or draw four
+        UnoCardData last_card = null;
+        if (publicPile.Count > 0) {
+            last_card = (UnoCardData)publicPile[publicPile.Count - 1];
+        }
 
-
-        return new GameStateUno(deckCardCount, otherPlayersHandCardCounts, playerHandCards, publicCards,currentColor, is_clockwise);
+        return new GameStateUno(deckCardCount, otherPlayersHandCardCounts, playerHandCards, 
+            publicCards,currentColor, is_clockwise, isDrawTwoActive, isDrawFourActive);
     }
 
 
