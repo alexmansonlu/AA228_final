@@ -176,7 +176,7 @@ public class GameManager : MonoBehaviour
         
         if (no_card_to_play){
             
-            // If no card to play on draw 2, take the drawTwoPenalty
+            // If no valid card to play on draw 2 when penalty is active, take the drawTwoPenalty
             if (last_card != null && last_card.value == UnoValue.DrawTwo && isDrawTwoActive) {
                 for (int i = 0; i < drawTwoPenalty; i++) {
                     current_player.DrawCard(deck, cardPrefab);
@@ -188,7 +188,7 @@ public class GameManager : MonoBehaviour
                 return;
             }
 
-            // If no card to play on draw 4, take the drawFourPenalty
+            // If no valid card to play on draw 4 when penalty is active, take the drawFourPenalty
             else if (last_card != null && last_card.value == UnoValue.WildDrawFour && isDrawFourActive) {
                 for (int i = 0; i < drawFourPenalty; i++) {
                     current_player.DrawCard(deck, cardPrefab);
@@ -277,6 +277,11 @@ public class GameManager : MonoBehaviour
                 {
                     // Restrict only non-Draw Four Wild cards when a Draw Four is active
                     if (lastCardData.value == UnoValue.WildDrawFour && isDrawFourActive && currentCard.value != UnoValue.WildDrawFour) {
+                        return false;
+                    }
+
+                    // Restrict Wilds from being played if a Draw Two is active
+                    else if (lastCardData.value == UnoValue.DrawTwo && isDrawTwoActive && currentCard.value != UnoValue.DrawTwo) {
                         return false;
                     }
                     return true;
