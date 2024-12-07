@@ -94,7 +94,7 @@ public class Player: MonoBehaviour
         UnityEngine.Debug.Log(HandCardObjects.Count);
         foreach (GameObject cardObject in HandCardObjects){
             Destroy(cardObject);
-            UnityEngine.Debug.Log("hello 1"+name);
+            //UnityEngine.Debug.Log("hello 1"+name);
         }
 
         HandCardObjects = new List<GameObject>();

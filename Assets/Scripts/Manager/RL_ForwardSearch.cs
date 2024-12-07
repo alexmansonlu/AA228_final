@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using System;
 
 /*
     Note from Justin: Hello! I am trying to make a very clear process of what we should get done before the project.
@@ -24,7 +25,7 @@ using UnityEngine;
 
 
 // Main class for our RL agent
-public class RL_ForwardSearch
+public class RL_ForwardSearch:MonoBehaviour
 {
 
     /*
@@ -47,13 +48,34 @@ public class RL_ForwardSearch
 
     // Check if a card can be played (simplified for now)
     private bool CheckPlayability(GameStateUno state, UnoCardData card)
-    {
-        // Simple check: card must match current color or value, or be a wild card
-        if (card.color == state.CurrentColor || card.value == state.PublicPile[0].value || card.color == UnoColor.Wild)
+    {   
+        if ( state.PublicPile.Count == 0)
         {
-            return true;
+            return true; // No public card means any card can be played
         }
-        return false;
+        UnoCardData lastCardData = state.PublicPile[state.PublicPile.Count - 1] as UnoCardData;
+        if (lastCardData != null && card != null)
+            {   
+                // Debug.Log(all_players[(turnCount - 1) % all_players.Count] + " last card: " + lastCardData.color + " " + lastCardData.value);
+                if (card.color == UnoColor.Wild)
+                {
+                    return true;
+                }
+
+
+                if(lastCardData.color == UnoColor.Wild)
+                {
+                    return (int)(card.color) == state.CurrentColor;
+                }
+                else{
+                    // Basic Uno rule: Check if the card color or value matches
+                    return card.color == lastCardData.color || card.value == lastCardData.value;
+                }
+
+             
+            }
+
+            return false;
     }
 
     // Get all cards that can be played given handcards
@@ -77,16 +99,16 @@ public class RL_ForwardSearch
     private GameStateUno ApplyAction(GameStateUno state, UnoCardData card, int playerTurn)
     {
         // Simplified: Update the game state as if the card was played
-        state.PublicPile.Insert(0,card);  // Place card on top of the pile
+        state.PublicPile.Add(card);  // Place card on top of the pile
         state.PlayerHandCards.Remove(card);  // Remove card from hand
 
         if(card.color == UnoColor.Wild){
             // here we just assume the wildcard will choose random color (TODO need to solve it, but kinda complicated as it increase the branches a lot)
             int randomIndex = UnityEngine.Random.Range(0, 4);
-            state.CurrentColor = (UnoColor)Enum.GetValues(typeof(UnoColor)).GetValue(randomIndex);
+            state.CurrentColor = (int)Enum.GetValues(typeof(UnoColor)).GetValue(randomIndex);
         }
         else{
-            state.CurrentColor = card.color;
+            state.CurrentColor = (int)(card.color);
         }
 
         // here calculate the +2 and +4 if needed
@@ -98,8 +120,8 @@ public class RL_ForwardSearch
     {
         // here we need a algorithm TODO
         float utility = 0;
-        utility += state.otherPlayersHandCardCounts[0]; // opponent A
-        utility += state.otherPlayersHandCardCounts[1]; // opponent B
+        utility += state.OtherPlayersHandCardCounts[0]; // opponent A
+        utility += state.OtherPlayersHandCardCounts[1]; // opponent B
         utility -= state.PlayerHandCards.Count; // our agent card number
 
         return utility;
@@ -116,12 +138,20 @@ public class RL_ForwardSearch
 
         // Get all possible actions (cards you can play)
         List<UnoCardData> playableCards = GetPlayableCards(state.PlayerHandCards, state);
-        intermediateReward = 0;
+        //Debug.Log("Current playable cards are: ");
+        state.LogState();
+        string s = "Current playable cards are: ";
+        foreach(var card in playableCards){
+            s += card.color + " " + card.value + ", ";
+        }
+        Debug.Log(s);
+        
+        float intermediateReward = 0f;
 
         if (playableCards.Count == 0){
             // we just draw once and give negative reward, and continue to do the roll out
             state.PlayerHandCardsCount++;
-            intermdediateReward = -20; // TODO: we need to adjust this number
+            intermediateReward = -20; // TODO: we need to adjust this number
 
             float futureUtility = RolloutLookahead(state.Clone(), depth);
             return (null,futureUtility+intermediateReward);
@@ -133,7 +163,7 @@ public class RL_ForwardSearch
             UnoCardData bestAction = null;  // To store the best card
             // find the best possible outcome
             foreach(var card in playableCards){
-                GameStateUno newState = ApplyAction(state.Clone(), currentAction, 0);
+                GameStateUno newState = ApplyAction(state.Clone(), card, 0);
                 float futureUtility = RolloutLookahead(newState.Clone(), depth);
 
                 // here can add intermediate reward if required (for keeping resource in hand)
@@ -158,7 +188,7 @@ public class RL_ForwardSearch
     private float RolloutLookahead(GameStateUno state, int depth)
     {   
 
-        int intermediateRewardA = 0;
+        float intermediateReward = 0;
         float totalUtility = 0;
         // Simulate random moves for opponents (assuming two opponents)
         List<UnoCardData> opponentAPlayableCards = GetPlayableCards(state.OpponentAHandCards,state);  // Get playable cards for opponent A
@@ -166,35 +196,34 @@ public class RL_ForwardSearch
             //draw a card and go on (here it is approximation only, because we ignore the card being drawn)
             // dealing with drawn card seem far too complicated
 
-            intermediateRewardA += 10; // could change this number afterward or we can skip Intermediate Reward
-            state.otherPlayersHandCardCounts[0] += 1;
+            intermediateReward += 10; // could change this number afterward or we can skip Intermediate Reward
+            state.OtherPlayersHandCardCounts[0] += 1;
 
             // and go for player b
-            intermediateRewardB = intermediateRewardA;
             List<UnoCardData> opponentBPlayableCards = GetPlayableCards(state.OpponentBHandCards,state);  // Get playable cards for opponent B
 
             // if playerB ALSO HAVE NO CARD TO PLAY
             if (opponentBPlayableCards.Count == 0){
                 //draw a card and go on
                 intermediateReward += 10f; // could change this number afterward or we can skip Intermediate Reward
-                state.otherPlayersHandCardCounts[1] += 1;
+                state.OtherPlayersHandCardCounts[1] += 1;
 
                 // agent turns
-                float futureUtility = ForwardSearchRecursive(state.Clone(), depth - 1);  // Look ahead for next move
+                var (bestAction, futureUtility) = ForwardSearchRecursive(state.Clone(), depth - 1);  // Look ahead for next move
                 float weight = 1f; //since there is only one possibility as both opponents got no card to play
-                totalUtility += futureUtility * weight;
+                totalUtility += (futureUtility+intermediateReward) * weight;
 
             }
             else{
-                foreach (var cardb in opponentBPlayableCards)
+                foreach (var cardB in opponentBPlayableCards)
                 {
-                    GameStateUno tempStateB = ApplyAction(state.Clone(), cardb,2);  // Opponent B plays a card
+                    GameStateUno tempStateB = ApplyAction(state.Clone(), cardB,2);  // Opponent B plays a card
 
                     // then it is player's turn
-                    float futureUtility = ForwardSearchRecursive(tempStateB.Clone(), depth - 1);  // Look ahead for next move
+                    var (bestAction, futureUtility) = ForwardSearchRecursive(tempStateB.Clone(), depth - 1);  // Look ahead for next move
 
                     float weight = 1f/(opponentBPlayableCards.Count); // assume all playable card have equal possibility to be played
-                    totalUtility += futureUtility * weight;
+                    totalUtility += (futureUtility+intermediateReward) * weight;
                 }
             }
 
@@ -202,7 +231,7 @@ public class RL_ForwardSearch
 
         }
         else{
-            foreach (var carda in opponentAPlayableCards)
+            foreach (var cardA in opponentAPlayableCards)
             {
                 GameStateUno tempStateA = ApplyAction(state.Clone(), cardA,1);  // Opponent A plays a card
 
@@ -210,21 +239,21 @@ public class RL_ForwardSearch
                 if (opponentBPlayableCards.Count == 0){
                     //draw a card and go back to agent turn
                     intermediateReward += 10f; // could change this number afterward or we can skip Intermediate Reward
-                    tempStateA.otherPlayersHandCardCounts[1] += 1;
-                    float futureUtility = ForwardSearchRecursive(tempStateA.Clone(), depth - 1);  
+                    tempStateA.OtherPlayersHandCardCounts[1] += 1;
+                    var (bestAction, futureUtility) = ForwardSearchRecursive(tempStateA.Clone(), depth - 1);  // Look ahead for next move
                     float weight = 1f/(opponentAPlayableCards.Count);
-                    totalUtility += futureUtility * weight;
+                    totalUtility += (futureUtility+intermediateReward) * weight;
                 
                 }
                 else{
-                    for (var cardB in opponentBPlayableCards){
+                    foreach (var cardB in opponentBPlayableCards){
                         GameStateUno tempStateB = ApplyAction(tempStateA.Clone(), cardB,2);  // Opponent B plays a card
 
-                        float futureUtility = ForwardSearchRecursive(tempStateB.Clone(), depth - 1);  // Look ahead for next move for agent
+                        var (bestAction, futureUtility) = ForwardSearchRecursive(tempStateB.Clone(), depth - 1);  // Look ahead for next move for agent
 
                         float weight = 1f/(opponentBPlayableCards.Count*opponentAPlayableCards.Count); // assume all playable card have equal possibility to be played
 
-                        toitalUtility += futureUtility * weight;
+                        totalUtility += (futureUtility+intermediateReward) * weight;
                     }
                 }
 
@@ -291,21 +320,21 @@ public class RL_ForwardSearch
         Outputs:
         - List<UnoCardData> actions (a)- This is a list of all playable cards in our hand
     */
-    public List<UnoCardData> StateToActions(GameStateUno state)
-    {
-        List<UnoCardData> actions = new List<UnoCardData>();
+    // public List<UnoCardData> StateToActions(GameStateUno state)
+    // {
+    //     List<UnoCardData> actions = new List<UnoCardData>();
 
-        foreach (UnoCardData card in state.PlayerHandCards)
-        {
-            UnoCardData last_card = state.PublicPile[state.PublicPile.Count - 1];
-            if (CheckPlayability(card, last_card))
-            {
-                actions.Add(card);
-            }
-        }
+    //     foreach (UnoCardData card in state.PlayerHandCards)
+    //     {
+    //         UnoCardData last_card = state.PublicPile[state.PublicPile.Count - 1];
+    //         if (CheckPlayability(state, card))
+    //         {
+    //             actions.Add(card);
+    //         }
+    //     }
 
-        return actions;
-    }
+    //     return actions;
+    // }
 
 
 

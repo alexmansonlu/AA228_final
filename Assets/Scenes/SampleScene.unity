@@ -1924,6 +1924,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1423093584}
   - component: {fileID: 1423093583}
+  - component: {fileID: 1423093585}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -1947,6 +1948,7 @@ MonoBehaviour:
   deck: []
   publicPile: []
   publicCardObjects: []
+  all_players: []
   cardPrefab: {fileID: 2662077265348488091, guid: 1abe3be7567f9144396f7af302b63ad4, type: 3}
   handAreas:
   - {fileID: 218782301}
@@ -1956,7 +1958,11 @@ MonoBehaviour:
   publicCardPrefab: {fileID: 1891656989358409621, guid: 3beaca883a751de44a31a3e98f7a27c8, type: 3}
   publicCardArea: {fileID: 1697173321}
   colorPickerManager: {fileID: 699997627}
-  myPlayerType: 0
+  myPlayerType: 1
+  scores: 
+  cardLefts: 
+  maxRound: 20
+  rl_forward_search: {fileID: 1423093585}
 --- !u!4 &1423093584
 Transform:
   m_ObjectHideFlags: 0
@@ -1972,6 +1978,18 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1423093585
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1423093582}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8dbd607114af4414d9306f6c6926c3ef, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1001 &1495056315
 PrefabInstance:
   m_ObjectHideFlags: 0

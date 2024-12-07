@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using Photon.Pun.UtilityScripts;
 using System;
-
+using System.Collections;
 public class GameManager : MonoBehaviour
 {
     public static GameManager Instance;
@@ -38,7 +38,7 @@ public class GameManager : MonoBehaviour
 
     [SerializeField] private List<int> scores;
     [SerializeField] private List<int> cardLefts;
-    [SerializeField] private int maxRound = 10;
+    [SerializeField] int maxRound = 100;
     int currentRound = 0; 
 
 
@@ -47,6 +47,8 @@ public class GameManager : MonoBehaviour
 
     // tcp server
     private TCPServer tcpServer;
+
+    bool startNewGame = true;
 
 
 
@@ -60,11 +62,28 @@ public class GameManager : MonoBehaviour
         scores = new List<int>{0,0,0}; // Initialize the scores list
         cardLefts = new List<int>{0,0,0};
 
-        InitializeGame();
+        
+    }
+
+    IEnumerator waiter()
+    {
+        //Wait for 4 seconds
+        yield return new WaitForSeconds(1);
+
+    }
+
+    private void Update(){
+        if (startNewGame){
+            startNewGame = false;
+            InitializeGame();
+        }
     }
 
     private void InitializeGame()
-    {   
+    {      
+        // sleep for 1 second using Unity function
+        StartCoroutine(waiter());
+        
         // open tcp server
         // Start the TCP server on port 8080
         // tcpServer = gameObject.AddComponent<TCPServer>();
@@ -72,8 +91,8 @@ public class GameManager : MonoBehaviour
 
         currentRound++;
         if(currentRound>=maxRound){
-            Debug.Log("Game end, the score is: " + scores);
-            Debug.Log("Card lefts are " + cardLefts);
+            Debug.Log("Game end, the score is: " + scores[0]+", "+scores[1]+", "+scores[2]);
+            Debug.Log("Card lefts are " + cardLefts[0]+", "+cardLefts[1]+", "+cardLefts[2]);
             Debug.Log("win rate is " + scores[0]/(scores[0]+scores[1]+scores[2]));
             return;
         }
@@ -128,12 +147,14 @@ public class GameManager : MonoBehaviour
             
         }
 
-        if(player.playerType != PlayerType.AI_RL){
-            StartTurn(); //don't start the turn when player is RL, wait until the server is connected
-        }
-        else{
-            Debug.Log("Waiting for server connection...");
-        }
+        // if(player.playerType != PlayerType.AI_RL){
+        //     StartTurn(); //don't start the turn when player is RL, wait until the server is connected
+        // }
+        // else{
+        //     Debug.Log("Waiting for server connection...");
+        // }
+
+        StartTurn();
 
         
     }
@@ -160,16 +181,19 @@ public class GameManager : MonoBehaviour
 
     public void StartTurn()
     {   
-        if (reverse_flag == false) {
-            turnCount++;  
-        }
+        // if (startNewGame){
+        //     return;
+        // }
+        // if (reverse_flag == false) {
+        //     turnCount++;  
+        // }
 
-        else {
-            turnCount--; // Go in reverse order for players
-            if (turnCount < 0) {
-                turnCount += all_players.Count;  // Have to do this to avoid negative turnCount indexing with reverse
-            }
-        }
+        // else {
+        //     turnCount--; // Go in reverse order for players
+        //     if (turnCount < 0) {
+        //         turnCount += all_players.Count;  // Have to do this to avoid negative turnCount indexing with reverse
+        //     }
+        // }
         
         // draw card if needed(not for uno)
         // if (deck.Count > 0)
@@ -248,6 +272,9 @@ public class GameManager : MonoBehaviour
             GameStateUno gameState = getGameState();
             gameState.LogState();
 
+            UnoCardData cd = rl_forward_search.ForwardSearch(gameState.Clone(),3);
+            Debug.Log("forward search result: " + cd.color + " " + cd.value);
+
         }
 
         if (current_player.playerType == PlayerType.AI_RL){
@@ -262,15 +289,30 @@ public class GameManager : MonoBehaviour
 
             // PlayCard(current_card)
 
-            UnoCardData cd = rl_forward_search.forward_search(gameState.Clone(),3);
+            UnoCardData cd = rl_forward_search.ForwardSearch(gameState.Clone(),1);
+            Debug.Log("forward search result: " + cd.color + " " + cd.value);
 
+            foreach (GameObject cardObject in current_player.HandCardObjects)
+            {
+                Card cardComponent = cardObject.GetComponent<Card>();
+                if (((UnoCard)cardComponent).color == cd.color && ((UnoCard)cardComponent).value == cd.value)
+                {      
+                    //Debug.Log("AI played " + ((UnoCard)cardComponent).color  + " " + ((UnoCard)cardComponent).value);
+                    PlayCard(cardComponent);
+                    break;
+                }
+            }
 
 
         }
+
+       
         
 
         if (current_player.playerType == PlayerType.AI_Random){
             // Random AI play HERE
+
+            if(current_player.HandCardObjects.Count == 0) return;
             while(true)
             {
                 int randomIndex = UnityEngine.Random.Range(0, current_player.HandCardObjects.Count);
@@ -343,13 +385,13 @@ public class GameManager : MonoBehaviour
         publicPile = new List<CardData>();
         deck = new List<CardData>();
         reverse_flag = false;
-        turnCount = 0;
+        turnCount = UnityEngine.Random.Range(0, 3);;
 
-        InitializeGame();
+        startNewGame = true;
     }
 
     // Function to play a card and add it to the public pile
-    public void PlayCard(Card card, UnoColor chosenColor = UnoColor.Wild)
+    public void PlayCard(Card card, UnoColor chosenColor = UnoColor.Red)
     {
         //Debug.Log("Turn Counter: " + turnCount);
         if (CheckPlayability(card))
@@ -366,8 +408,13 @@ public class GameManager : MonoBehaviour
             //check win
             if (cardplayer.HandCardObjects.Count == 0){
                 Debug.Log("Player " + cardplayer.name + " wins!");
-                int index = all_players.IndexOf(cardplayer);
-                scores[index]++; //update score
+                for (int i = 0; i < all_players.Count; i++){
+                    if(all_players[i].name == cardplayer.name){
+                        scores[i]++;
+                        break;
+                    }
+                }
+                //scores[index]++; //update score
 
                 for (int i = 0; i < all_players.Count; i++){
                     cardLefts[i] += all_players[i].HandCardObjects.Count;
@@ -403,33 +450,33 @@ public class GameManager : MonoBehaviour
                 else{
 
                     // Case of Skip
-                    if (((UnoCard)card).value == UnoValue.Skip) {
-                        if (reverse_flag) {
-                            turnCount--;
-                            if (turnCount < 0) {
-                                turnCount += all_players.Count;  // Out of bounds check
-                            }
-                        }
+                    // if (((UnoCard)card).value == UnoValue.Skip) {
+                    //     if (reverse_flag) {
+                    //         turnCount--;
+                    //         if (turnCount < 0) {
+                    //             turnCount += all_players.Count;  // Out of bounds check
+                    //         }
+                    //     }
 
-                        else {
-                            turnCount++;
-                        }
+                    //     else {
+                    //         turnCount++;
+                    //     }
                         
-                        Debug.Log("Player " + all_players[turnCount % all_players.Count].name + " has been skipped!");
-                    }
+                    //     Debug.Log("Player " + all_players[turnCount % all_players.Count].name + " has been skipped!");
+                    // }
 
                     // Case of Reverse
-                    if (((UnoCard)card).value == UnoValue.Reverse) {
-                        if (reverse_flag) {
-                            reverse_flag = false;
-                            Debug.Log("Player " + cardplayer.name + " has reversed the direction of play! Direction of player: clockwise");
-                        }
+                    // if (((UnoCard)card).value == UnoValue.Reverse) {
+                    //     if (reverse_flag) {
+                    //         reverse_flag = false;
+                    //         Debug.Log("Player " + cardplayer.name + " has reversed the direction of play! Direction of player: clockwise");
+                    //     }
 
-                        else {
-                            reverse_flag = true;
-                            Debug.Log("Player " + cardplayer.name + " has reversed the direction of play! Direction of player: counter-clockwise");
-                        }
-                    }
+                    //     else {
+                    //         reverse_flag = true;
+                    //         Debug.Log("Player " + cardplayer.name + " has reversed the direction of play! Direction of player: counter-clockwise");
+                    //     }
+                    // }
 
                     if (((UnoCard)card).value == UnoValue.DrawTwo) {
                         // do something
@@ -491,24 +538,26 @@ public class GameManager : MonoBehaviour
 
     public GameStateUno getGameState(){
         int deckCardCount = deck.Count;
-        List<int> otherPlayersHandCardCounts = new List<int>();
-        List<UnoCardData> OpponentAHandCards; 
-        List<UnoCardData> OpponentBHandCards; 
+        List<int> otherPlayersHandCardCounts = new List<int>{0,0};
+        List<UnoCardData> OpponentAHandCards = new List<UnoCardData>(); 
+        List<UnoCardData> OpponentBHandCards = new List<UnoCardData>(); 
         foreach (Player player in all_players){
             if (player != current_player){
-                otherPlayersHandCardCounts.Add(player.HandCardObjects.Count);
-            }
 
             if(player.name =="Player A"){
                 foreach(GameObject go in player.HandCardObjects){
                     OpponentAHandCards.Add((UnoCardData)go.GetComponent<Card>().cardData);
                 }
+                otherPlayersHandCardCounts[0] = (player.HandCardObjects.Count);
+            }
             }
 
             if(player.name =="Player B"){
                 foreach(GameObject go in player.HandCardObjects){
                     OpponentBHandCards.Add((UnoCardData)go.GetComponent<Card>().cardData);
                 }
+
+                otherPlayersHandCardCounts[1] = (player.HandCardObjects.Count);
             }
         }
 
@@ -525,12 +574,18 @@ public class GameManager : MonoBehaviour
         }
 
         //get current color and value
-        UnoCardData lastCardData = publicPile[publicPile.Count - 1] as UnoCardData;
+        UnoCardData lastCardData ;
+        if(publicPile.Count == 0){
+            lastCardData=null;
+        }
+        else{
+            lastCardData =publicPile[publicPile.Count - 1] as UnoCardData;
+        }
         int currentColor = (int)saved_Color; // Cast saved_Color to int
 
         // get direction of play
         bool is_clockwise = !reverse_flag;
-        
+        Debug.Log("therPlayersHandCardCounts: " + otherPlayersHandCardCounts.Count);
 
 
 

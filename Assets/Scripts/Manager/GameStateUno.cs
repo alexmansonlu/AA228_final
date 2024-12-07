@@ -49,6 +49,18 @@ public class GameStateUno
             stateInfo += $"- {card.color} {card.value}\n";
         }
 
+        stateInfo += "Opponent A's Hand Cards:\n";
+        foreach (var card in OpponentAHandCards)
+        {
+            stateInfo += $"- {card.color} {card.value}\n";
+        }
+
+        stateInfo += "Opponent B's Hand Cards:\n";
+        foreach (var card in OpponentBHandCards)
+        {
+            stateInfo += $"- {card.color} {card.value}\n";
+        }
+
         stateInfo += "Public Pile:\n";
         foreach (var card in PublicPile)
         {
