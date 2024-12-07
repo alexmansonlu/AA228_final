@@ -21,6 +21,10 @@ public class GameManager : MonoBehaviour
     public List<Player> all_players = new List<Player>();
     private Player player; // The single player in this game
     private int turnCount = 0; // Tracks how many turns have been played
+    private bool isDrawTwoActive = false; // Checks whether a draw two is active
+    private bool isDrawFourActive = false;
+    private int drawTwoPenalty = 0;
+    private int drawFourPenalty = 0;
 
     //current player
     Player current_player;
@@ -298,6 +302,45 @@ public class GameManager : MonoBehaviour
     // Function to play a card and add it to the public pile
     public void PlayCard(Card card, UnoColor chosenColor = UnoColor.Wild)
     {
+        Player cardplayer = card.owner;
+        UnoCardData last_card = null;
+        if (publicPile.Count > 0) {
+            last_card = (UnoCardData)publicPile[publicPile.Count - 1];
+        }
+        
+        // Draw Two Logic Starts
+        if(last_card != null && last_card.value == UnoValue.DrawTwo) {
+            drawTwoPenalty += 2;
+            isDrawTwoActive = true;
+
+            if (((UnoCard)card).value != UnoValue.DrawTwo) {
+                for (int i = 0; i < drawTwoPenalty; i++) {
+                    current_player.DrawCard(deck, cardPrefab);
+                }
+                Debug.Log("Player " + current_player.name + " has drawn " + drawTwoPenalty + " cards!");
+                drawTwoPenalty = 0;
+                isDrawTwoActive = false;
+            }
+        }
+
+        // Draw Four Logic Starts
+        if(last_card != null && last_card.value == UnoValue.WildDrawFour) {
+            drawFourPenalty += 4;
+            isDrawFourActive = true;
+
+            if (((UnoCard)card).value != UnoValue.WildDrawFour) {
+                for (int i = 0; i < drawFourPenalty; i++) {
+                    current_player.DrawCard(deck, cardPrefab);
+                }
+                Debug.Log("Player " + current_player.name + " has drawn " + drawFourPenalty + " cards!");
+                drawFourPenalty = 0;
+                isDrawFourActive = false;
+            }
+        }
+
+        
+
+
         Debug.Log("Turn Counter: " + turnCount);
         if (CheckPlayability(card))
         {
@@ -306,8 +349,6 @@ public class GameManager : MonoBehaviour
             GameObject publicCardObject = Instantiate(publicCardPrefab, publicCardArea);
             publicCardObject.GetComponentInChildren<CardGUI>().UpdateCardFace(card.cardData);
             publicCardObjects.Add(publicCardObject);
-
-            Player cardplayer = card.owner;
             cardplayer.HandCardObjects.Remove(card.gameObject); // Remove card GameObject from player's hand
             
             //check win
@@ -320,7 +361,8 @@ public class GameManager : MonoBehaviour
             Debug.Log($"{cardplayer.name} Played {card.GetType().Name} - {((UnoCard)card).color} {((UnoCard)card).value}");
 
             //post play card ability for uno
-            if (currentGame == GameType.Uno){
+            if (currentGame == GameType.Uno){    
+            
                 if (((UnoCard)card).color == UnoColor.Wild){
                     colorPickerManager.updateColorIndicator(UnoColor.Wild);
                     if(cardplayer.playerType == PlayerType.Human){
@@ -453,11 +495,27 @@ public class GameManager : MonoBehaviour
 
         // get direction of play
         bool is_clockwise = !reverse_flag;
-        
+
+        // See if we should be playing draw two or draw four
+        UnoCardData last_card = null;
+        if (publicPile.Count > 0) {
+            last_card = (UnoCardData)publicPile[publicPile.Count - 1];
+        }
+
+        bool drawTwoActive = false;
+        bool drawFourActive = false;
+
+        if (last_card.value == UnoValue.DrawTwo) {
+            drawTwoActive = true;
+        }
+
+        if (last_card.value == UnoValue.WildDrawFour) {
+            drawFourActive = true;
+        }
 
 
-
-        return new GameStateUno(deckCardCount, otherPlayersHandCardCounts, playerHandCards, publicCards,currentColor, is_clockwise);
+        return new GameStateUno(deckCardCount, otherPlayersHandCardCounts, playerHandCards, 
+            publicCards,currentColor, is_clockwise, drawTwoActive, drawFourActive);
     }
 
 
