@@ -180,6 +180,7 @@ public class GameManager : MonoBehaviour
         // if (reverse_flag == false) {
         //     turnCount++;  
         // }
+        turnCount++;
 
         // else {
         //     turnCount--; // Go in reverse order for players

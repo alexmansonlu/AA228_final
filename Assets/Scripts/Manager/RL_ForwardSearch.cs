@@ -100,7 +100,22 @@ public class RL_ForwardSearch:MonoBehaviour
     {
         // Simplified: Update the game state as if the card was played
         state.PublicPile.Add(card);  // Place card on top of the pile
-        state.PlayerHandCards.Remove(card);  // Remove card from hand
+        
+        if (playerTurn == 0){
+            //Debug.Log("Card played: " + card.color + " " + card.value + ". Player remaining cards: " + state.PlayerHandCards.Count);
+            state.PlayerHandCardsCount--;
+            state.PlayerHandCards.Remove(card);  // Remove card from hand
+            //Debug.Log("Player remaining cards: " + state.PlayerHandCards.Count);
+        }
+        else if (playerTurn == 1){
+            state.OtherPlayersHandCardCounts[0]--;
+            state.OpponentAHandCards.Remove(card);  // Remove card from hand
+        }
+        else if (playerTurn == 2){
+            state.OtherPlayersHandCardCounts[1]--;
+            state.OpponentBHandCards.Remove(card);  // Remove card from hand
+        }
+        
 
         if(card.color == UnoColor.Wild){
             // here we just assume the wildcard will choose random color (TODO need to solve it, but kinda complicated as it increase the branches a lot)
@@ -184,7 +199,8 @@ public class RL_ForwardSearch:MonoBehaviour
 
 
     // Perform a rollout lookahead (simulate opponent's random play)
-    // currently it is vanilla version where we ignore the reverse
+    // currently it is vanilla version where we ignore the reverse and skip and +2
+    // i just go through each player round in rollout
     private float RolloutLookahead(GameStateUno state, int depth)
     {   
 
