@@ -211,6 +211,7 @@ public class RL_ForwardSearch:MonoBehaviour
                 // agent turns
                 var (bestAction, futureUtility) = ForwardSearchRecursive(state.Clone(), depth - 1);  // Look ahead for next move
                 float weight = 1f; //since there is only one possibility as both opponents got no card to play
+                intermediateReward += RewardFunction(state, bestAction)
                 totalUtility += (futureUtility+intermediateReward) * weight;
 
             }
@@ -223,6 +224,7 @@ public class RL_ForwardSearch:MonoBehaviour
                     var (bestAction, futureUtility) = ForwardSearchRecursive(tempStateB.Clone(), depth - 1);  // Look ahead for next move
 
                     float weight = 1f/(opponentBPlayableCards.Count); // assume all playable card have equal possibility to be played
+                    intermediateReward += RewardFunction(state, bestAction)
                     totalUtility += (futureUtility+intermediateReward) * weight;
                 }
             }
@@ -242,6 +244,7 @@ public class RL_ForwardSearch:MonoBehaviour
                     tempStateA.OtherPlayersHandCardCounts[1] += 1;
                     var (bestAction, futureUtility) = ForwardSearchRecursive(tempStateA.Clone(), depth - 1);  // Look ahead for next move
                     float weight = 1f/(opponentAPlayableCards.Count);
+                    intermediateReward += RewardFunction(state, bestAction)
                     totalUtility += (futureUtility+intermediateReward) * weight;
                 
                 }
@@ -252,7 +255,7 @@ public class RL_ForwardSearch:MonoBehaviour
                         var (bestAction, futureUtility) = ForwardSearchRecursive(tempStateB.Clone(), depth - 1);  // Look ahead for next move for agent
 
                         float weight = 1f/(opponentBPlayableCards.Count*opponentAPlayableCards.Count); // assume all playable card have equal possibility to be played
-
+                        
                         totalUtility += (futureUtility+intermediateReward) * weight;
                     }
                 }
