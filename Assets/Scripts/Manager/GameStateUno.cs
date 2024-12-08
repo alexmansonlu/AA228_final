@@ -17,13 +17,15 @@ public class GameStateUno
     public List<UnoCardData> PlayerHandCards; 
     public List<UnoCardData> PublicPile; 
     public int CurrentColor;
+    public bool isDrawFourActive; 
+    public bool isDrawTwoActive;
     
     
     public bool Clockwise;  // Gives us the order of play
    
 
 
-    public GameStateUno(int deckCardCount, List<int> otherPlayersHandCardCounts, List<UnoCardData> playerHandCards, List<UnoCardData> publicPile, int currentColor = 0, bool order = true, List<UnoCardData> opponentAHandCards = null, List<UnoCardData> opponentBHandCards = null)
+    public GameStateUno(int deckCardCount, List<int> otherPlayersHandCardCounts, List<UnoCardData> playerHandCards, List<UnoCardData> publicPile, int currentColor = 0, bool order = true, List<UnoCardData> opponentAHandCards = null, List<UnoCardData> opponentBHandCards = null, bool isDrawFourActive = false, bool isDrawTwoActive = false)
     {
         DeckCardCount = deckCardCount;
         OtherPlayersHandCardCounts = otherPlayersHandCardCounts;
@@ -34,6 +36,10 @@ public class GameStateUno
 
         OpponentAHandCards = opponentAHandCards;
         OpponentBHandCards = opponentBHandCards;
+
+        this.isDrawFourActive = isDrawFourActive;
+        this.isDrawTwoActive = isDrawTwoActive;
+
     }
 
     // Method to log the state
@@ -85,32 +91,11 @@ public class GameStateUno
 
         stateInfo += $"Rotation of play is clockwise: {Clockwise}\n";
 
-        stateInfo += $"Draw two is active: {D2Active}\n";
-
-        stateInfo += $"Draw four is active: {D4Active}\n";
 
         // Use Debug.Log to print the information
         Debug.Log(stateInfo);
 
        
-    }
-
-    // to prevent using teh same game state over loop
-    public GameStateUno Clone()
-    {
-        // Create a new instance and copy the values over
-        GameStateUno clone = new GameStateUno(
-            this.DeckCardCount, 
-            new List<int>(this.OtherPlayersHandCardCounts), 
-            new List<UnoCardData>(this.PlayerHandCards), 
-            new List<UnoCardData>(this.PublicPile), 
-            this.CurrentColor, 
-            this.Clockwise,
-            new List<UnoCardData>(this.OpponentAHandCards),
-            new List<UnoCardData>(this.OpponentBHandCards)
-        );
-
-        return clone;
     }
 
     // to prevent using teh same game state over loop
