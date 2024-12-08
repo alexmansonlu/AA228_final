@@ -370,11 +370,31 @@ public class RL_ForwardSearch:MonoBehaviour
         Outputs:
         - greedy_action (a)
     */
-    public UnoCardData CreatePolicy(GameStateUno state)
-    {
+    public UnoCardData CreatePolicy(GameStateUno state) {
         // TODO: Implement policy creation logic here
-        UnoCardData greedy_action = null;
-        return greedy_action;
+        // UnoCardData greedy_action = null;
+        // return greedy_action;
+
+        List<UnoCardData> playableCards = GetPlayableCards(state.PlayerHandCards, state);
+
+        // if (playableCards.Count == 0) {
+        //     // action is draw card
+        // }
+
+        UnoCardData bestAction = null;
+        float bestUtility = float.MinValue;
+        foreach (var card in playableCards)
+        {
+            // try out new state 
+            GameStateUno newState = ApplyAction(state.Clone(), card, 0);
+            float utility = CalculateUtility(newState);
+            // choose if better utility than current
+            if (utility > bestUtility) {
+                bestUtility = utility;
+                bestAction = card;
+            }
+        }
+        return bestAction;
     }
 
 
@@ -409,11 +429,11 @@ public class RL_ForwardSearch:MonoBehaviour
             // reward if stacked 
             if (action.value == UnoValue.DrawTwo || action.value == UnoValue.WildDrawFour) {
                 List<UnoCardData> next_player_cards = state.Clockwise ? state.OpponentAHandCards : state.OpponentBHandCards;
-                reward += (10f / next_player_cards.Count); 
+                reward += (20f / next_player_cards.Count); 
             }
             // penalize if forced to draw, penalized more if you have fewer cards 
             else {
-                reward += (10f / state.PlayerHandCardsCount);
+                reward += (20f / state.PlayerHandCardsCount);
             }
         }
         // penalize playing +2, +4 if unecessary 
