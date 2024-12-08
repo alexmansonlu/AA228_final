@@ -21,6 +21,10 @@ public class GameManager : MonoBehaviour
     public List<Player> all_players = new List<Player>();
     private Player player; // The single player in this game
     private int turnCount = 0; // Tracks how many turns have been played
+    private bool isDrawTwoActive = false; // Checks whether a draw two is active
+    private bool isDrawFourActive = false;
+    private int drawTwoPenalty = 0;
+    private int drawFourPenalty = 0;
 
     //current player
     Player current_player;
@@ -44,9 +48,19 @@ public class GameManager : MonoBehaviour
 
     [SerializeField]  RL_ForwardSearch rl_forward_search;
 
+    [SerializeField] private List<int> scores;
+    [SerializeField] private List<int> cardLefts;
+    [SerializeField] int maxRound = 100;
+    int currentRound = 0; 
+
+
+    [SerializeField]  RL_ForwardSearch rl_forward_search;
+
 
     // tcp server
     private TCPServer tcpServer;
+
+    bool startNewGame = true;
 
     bool startNewGame = true;
 
@@ -71,9 +85,24 @@ public class GameManager : MonoBehaviour
             startNewGame = false;
             InitializeGame();
         }
+        scores = new List<int>{0,0,0}; // Initialize the scores list
+        cardLefts = new List<int>{0,0,0};
+
+        
+    }
+
+
+    private void Update(){
+        if (startNewGame){
+            startNewGame = false;
+            InitializeGame();
+        }
     }
 
     private void InitializeGame()
+    {      
+        
+        
     {      
         
         
@@ -81,7 +110,21 @@ public class GameManager : MonoBehaviour
         // Start the TCP server on port 8080
         // tcpServer = gameObject.AddComponent<TCPServer>();
         // tcpServer.StartServer(8080,this);
+        // tcpServer = gameObject.AddComponent<TCPServer>();
+        // tcpServer.StartServer(8080,this);
 
+        currentRound++;
+        if(currentRound>=maxRound){
+            Debug.Log("Game end, the score is: " + scores[0]+", "+scores[1]+", "+scores[2]);
+            Debug.Log("Card lefts are " + cardLefts[0]+", "+cardLefts[1]+", "+cardLefts[2]);
+            Debug.Log("win rate is " + (float)scores[0]/(float)(scores[0]+scores[1]+scores[2]));
+            return;
+        }
+        else{
+            Debug.Log("Round: " + currentRound);
+
+            
+        }
         currentRound++;
         if(currentRound>=maxRound){
             Debug.Log("Game end, the score is: " + scores[0]+", "+scores[1]+", "+scores[2]);
@@ -127,7 +170,14 @@ public class GameManager : MonoBehaviour
             for (int i = 0; i < 2; i++){
                 Player player_simulated = new Player(handAreas[i+1],PlayerType.AI_Random, playerNames[i]);
                 all_players.Add(player_simulated);
+            string[] playerNames = {"Player A", "Player B"};
+            for (int i = 0; i < 2; i++){
+                Player player_simulated = new Player(handAreas[i+1],PlayerType.AI_Random, playerNames[i]);
+                all_players.Add(player_simulated);
 
+                // Player player_human = new Player(handAreas[i+1],PlayerType.AI_Random, playerNames[i]);
+                // all_players.Add(player_human);
+            }
                 // Player player_human = new Player(handAreas[i+1],PlayerType.AI_Random, playerNames[i]);
                 // all_players.Add(player_human);
             }
@@ -138,8 +188,18 @@ public class GameManager : MonoBehaviour
             player.DrawInitialHand(deck, cardPrefab, 7); // Draw 7 cards as starting hand
 
             
+
+            
         }
 
+        // if(player.playerType != PlayerType.AI_RL){
+        //     StartTurn(); //don't start the turn when player is RL, wait until the server is connected
+        // }
+        // else{
+        //     Debug.Log("Waiting for server connection...");
+        // }
+
+        StartTurn();
         // if(player.playerType != PlayerType.AI_RL){
         //     StartTurn(); //don't start the turn when player is RL, wait until the server is connected
         // }
@@ -174,6 +234,12 @@ public class GameManager : MonoBehaviour
 
     public void StartTurn()
     {   
+        if (startNewGame){
+            return;
+        }
+        if (reverse_flag == false) {
+            turnCount++;  
+        }
         // if (startNewGame){
         //     return;
         // }
@@ -181,6 +247,12 @@ public class GameManager : MonoBehaviour
         //     turnCount++;  
         // }
 
+        else {
+            turnCount--; // Go in reverse order for players
+            if (turnCount < 0) {
+                turnCount += all_players.Count;  // Have to do this to avoid negative turnCount indexing with reverse
+            }
+        }
         // else {
         //     turnCount--; // Go in reverse order for players
         //     if (turnCount < 0) {
@@ -199,30 +271,6 @@ public class GameManager : MonoBehaviour
         current_player = all_players[turnCount % all_players.Count];
         Debug.Log(current_player.name+"'s turn!");
         Boolean no_card_to_play = true;
-        // remove while loop for other rules
-
-        // below is for drawing until a playable card rules!!!
-        // while (no_card_to_play){
-        //     foreach (GameObject cardObject in current_player.HandCardObjects)
-        //     {
-        //         Card cardComponent = cardObject.GetComponent<Card>();
-        //         cardComponent.isPlayable = CheckPlayability(cardComponent);
-        //         if(no_card_to_play && cardComponent.isPlayable){
-        //             no_card_to_play = false;
-        //         }
-
-        //         if(current_player.playerType == PlayerType.Human || current_player.playerType == PlayerType.AI_RL){
-        //             //Debug.Log("can play: " + cardComponent.isPlayable);
-        //             cardObject.GetComponentInChildren<CardGUI>().SetCanPlay(cardComponent.isPlayable);
-        //         }
-        //     }
-
-        //     if (no_card_to_play){
-        //         Debug.Log(current_player.name+" has no playable cards. Drawing a card.");
-        //         current_player.DrawCard(deck, cardPrefab);
-
-        //     }
-        // }
 
         //Rule of drawing one card if no playable card, if the card can be played it will automatically play it, if not skip the turn
         foreach (GameObject cardObject in current_player.HandCardObjects)
@@ -239,7 +287,52 @@ public class GameManager : MonoBehaviour
             }
         }
 
+
+        UnoCardData last_card = null;
+        if (publicPile.Count > 0) {
+            last_card = publicPile[publicPile.Count - 1] as UnoCardData;
+        }
+        
         if (no_card_to_play){
+            
+            // If no valid card to play on draw 2 when penalty is active, take the drawTwoPenalty
+            if (last_card != null && last_card.value == UnoValue.DrawTwo && isDrawTwoActive) {
+                for (int i = 0; i < drawTwoPenalty; i++) {
+                    current_player.DrawCard(deck, cardPrefab);
+                }
+                Debug.Log("Player " + current_player.name + " has drawn " + drawTwoPenalty + " cards!");
+                drawTwoPenalty = 0;
+                isDrawTwoActive = false;
+                StartTurn();  // Skip Turn
+                return;
+            }
+
+            // If no valid card to play on draw 4 when penalty is active, take the drawFourPenalty
+            else if (last_card != null && last_card.value == UnoValue.WildDrawFour && isDrawFourActive) {
+                for (int i = 0; i < drawFourPenalty; i++) {
+                    current_player.DrawCard(deck, cardPrefab);
+                }
+                Debug.Log("Player " + current_player.name + " has drawn " + drawFourPenalty + " cards!");
+                drawFourPenalty = 0;
+                isDrawFourActive = false;
+                StartTurn();
+                return;
+            }
+
+            // Draw a card from deck, see if it is playable
+            else {
+                Debug.Log(current_player.name+" has no playable cards. Drawing a card.");
+                current_player.DrawCard(deck, cardPrefab);
+                //check the last card
+                Card lastCard = current_player.HandCardObjects[current_player.HandCardObjects.Count-1].GetComponent<Card>();
+                lastCard.isPlayable = CheckPlayability(lastCard);
+                if (!lastCard.isPlayable){
+                    //skip turn if the last card is not playable
+                    Debug.Log(current_player.name+ " draw a card but it is not playable. Skipping turn.");
+                    StartTurn();
+                    return;
+                }
+            }
             Debug.Log(current_player.name+" has no playable cards. Drawing a card.");
             if(deck.Count==0){
                 Debug.Log("Deck is empty. Game over.");
@@ -275,8 +368,8 @@ public class GameManager : MonoBehaviour
 
         }
 
-        if (current_player.playerType == PlayerType.AI_RL){
-            // Random AI play HERE
+        else if (current_player.playerType == PlayerType.AI_RL){
+            // RL Agent play here
             GameStateUno gameState = getGameState();  // States
             gameState.LogState();
 
@@ -307,8 +400,15 @@ public class GameManager : MonoBehaviour
        
         
 
-        if (current_player.playerType == PlayerType.AI_Random){
+        }
+
+       
+        
+
+        else if (current_player.playerType == PlayerType.AI_Random){
             // Random AI play HERE
+
+            if(current_player.HandCardObjects.Count == 0) return;
 
             if(current_player.HandCardObjects.Count == 0) return;
             while(true)
@@ -344,16 +444,54 @@ public class GameManager : MonoBehaviour
                 // Debug.Log(all_players[(turnCount - 1) % all_players.Count] + " last card: " + lastCardData.color + " " + lastCardData.value);
                 if (currentCard.color == UnoColor.Wild)
                 {
+                    // Restrict only non-Draw Four Wild cards when a Draw Four is active
+                    if (lastCardData.value == UnoValue.WildDrawFour && isDrawFourActive && currentCard.value != UnoValue.WildDrawFour) {
+                        return false;
+                    }
+
+                    // Restrict Wilds from being played if a Draw Two is active
+                    else if (lastCardData.value == UnoValue.DrawTwo && isDrawTwoActive && currentCard.value != UnoValue.DrawTwo) {
+                        return false;
+                    }
                     return true;
                 }
 
+                // Draw 4 Case:
+                if (lastCardData.value == UnoValue.WildDrawFour) {
+                    if (isDrawFourActive) {
+                        // Debug.Log("test A");
+                        return currentCard.value == UnoValue.WildDrawFour;
+                    }
 
-                if(lastCardData.color == UnoColor.Wild)
-                {
+                    else {
+                        // Debug.Log("test B");
+                        return currentCard.color == saved_Color;
+                    }
+                }
+
+                // Draw 2 Case:
+                else if (lastCardData.value == UnoValue.DrawTwo) {
+                    if (isDrawTwoActive) {
+                        // Debug.Log("test C");
+                        return currentCard.value == UnoValue.DrawTwo;
+                    }
+
+                    else {
+                        // Debug.Log("test D");
+                        return currentCard.color == lastCardData.color || currentCard.value == lastCardData.value;
+                    }
+                }
+                
+                // Wild Case:
+                else if (lastCardData.color == UnoColor.Wild) {
+                    // Debug.Log("test E");
                     return currentCard.color == saved_Color;
                 }
-                else{
+
+                // Not a Draw 4, Draw 2, or Wild
+                else {
                     // Basic Uno rule: Check if the card color or value matches
+                    // Debug.Log("test F");
                     return currentCard.color == lastCardData.color || currentCard.value == lastCardData.value;
                 }
 
@@ -387,9 +525,29 @@ public class GameManager : MonoBehaviour
         turnCount = UnityEngine.Random.Range(0, 3);;
 
         startNewGame = true;
+
+        // clean up all the handcard and public card objects
+        foreach (Player player in all_players){
+            player.resetHand();
+
+        }
+
+        foreach (GameObject cardObject in publicCardObjects){
+            Destroy(cardObject);
+        }
+
+        deck.Clear();
+        publicPile.Clear();
+        publicCardObjects.Clear();
+
+        reverse_flag = false;
+        turnCount = UnityEngine.Random.Range(0, 3);;
+
+        startNewGame = true;
     }
 
     // Function to play a card and add it to the public pile
+    public void PlayCard(Card card, UnoColor chosenColor = UnoColor.Red)
     public void PlayCard(Card card, UnoColor chosenColor = UnoColor.Red)
     {
         //Debug.Log("Turn Counter: " + turnCount);
@@ -400,13 +558,24 @@ public class GameManager : MonoBehaviour
             GameObject publicCardObject = Instantiate(publicCardPrefab, publicCardArea);
             publicCardObject.GetComponentInChildren<CardGUI>().UpdateCardFace(card.cardData);
             publicCardObjects.Add(publicCardObject);
-
-            Player cardplayer = card.owner;
             cardplayer.HandCardObjects.Remove(card.gameObject); // Remove card GameObject from player's hand
             
             //check win
             if (cardplayer.HandCardObjects.Count == 0){
                 Debug.Log("Player " + cardplayer.name + " wins!");
+                for (int i = 0; i < all_players.Count; i++){
+                    if(all_players[i].name == cardplayer.name){
+                        scores[i]++;
+                        break;
+                    }
+                }
+                //scores[index]++; //update score
+
+                for (int i = 0; i < all_players.Count; i++){
+                    cardLefts[i] += all_players[i].HandCardObjects.Count;
+                }
+                
+                Destroy(card.gameObject);
                 for (int i = 0; i < all_players.Count; i++){
                     if(all_players[i].name == cardplayer.name){
                         scores[i]++;
@@ -427,8 +596,16 @@ public class GameManager : MonoBehaviour
             Debug.Log($"{cardplayer.name} Played {card.GetType().Name} - {((UnoCard)card).color} {((UnoCard)card).value}");
 
             //post play card ability for uno
-            if (currentGame == GameType.Uno){
+            if (currentGame == GameType.Uno){    
+            
                 if (((UnoCard)card).color == UnoColor.Wild){
+
+                    // Draw four check
+                    if (((UnoCard)card).value == UnoValue.WildDrawFour) {
+                        Debug.Log("Test X");
+                        isDrawFourActive = true;
+                        drawFourPenalty += 4;
+                    }
                     colorPickerManager.updateColorIndicator(UnoColor.Wild);
                     if(cardplayer.playerType == PlayerType.Human){
                         // gonna choose a color
@@ -478,7 +655,8 @@ public class GameManager : MonoBehaviour
                     // }
 
                     if (((UnoCard)card).value == UnoValue.DrawTwo) {
-                        // do something
+                        isDrawTwoActive = true;
+                        drawTwoPenalty += 2;
                     }
 
 
@@ -487,11 +665,17 @@ public class GameManager : MonoBehaviour
                     Destroy(card.gameObject); // Destroy the card GameObject
                     // After a successful play, draw a new card if the deck isn't empty
                     cardplayer.TidyHand();
+                    cardplayer.TidyHand();
                     StartTurn(); // Start the next turn
 
 
                 }
             
+                // if (cardplayer.playerType == PlayerType.Human || cardplayer.playerType == PlayerType.AI_RL){
+                //     cardplayer.TidyHand();
+                // }
+
+                
                 // if (cardplayer.playerType == PlayerType.Human || cardplayer.playerType == PlayerType.AI_RL){
                 //     cardplayer.TidyHand();
                 // }
@@ -540,7 +724,24 @@ public class GameManager : MonoBehaviour
         List<int> otherPlayersHandCardCounts = new List<int>{0,0};
         List<UnoCardData> OpponentAHandCards = new List<UnoCardData>(); 
         List<UnoCardData> OpponentBHandCards = new List<UnoCardData>(); 
+        List<int> otherPlayersHandCardCounts = new List<int>{0,0};
+        List<UnoCardData> OpponentAHandCards = new List<UnoCardData>(); 
+        List<UnoCardData> OpponentBHandCards = new List<UnoCardData>(); 
         foreach (Player player in all_players){
+            if(player.name =="Player A"){
+                foreach(GameObject go in player.HandCardObjects){
+                    OpponentAHandCards.Add((UnoCardData)go.GetComponent<Card>().cardData);
+                }
+                otherPlayersHandCardCounts[0] = (player.HandCardObjects.Count);
+            }
+            
+
+            if(player.name =="Player B"){
+                foreach(GameObject go in player.HandCardObjects){
+                    OpponentBHandCards.Add((UnoCardData)go.GetComponent<Card>().cardData);
+                }
+
+                otherPlayersHandCardCounts[1] = (player.HandCardObjects.Count);
             if(player.name =="Player A"){
                 foreach(GameObject go in player.HandCardObjects){
                     OpponentAHandCards.Add((UnoCardData)go.GetComponent<Card>().cardData);
@@ -578,14 +779,29 @@ public class GameManager : MonoBehaviour
         else{
             lastCardData =publicPile[publicPile.Count - 1] as UnoCardData;
         }
+        UnoCardData lastCardData ;
+        if(publicPile.Count == 0){
+            lastCardData=null;
+        }
+        else{
+            lastCardData =publicPile[publicPile.Count - 1] as UnoCardData;
+        }
         int currentColor = (int)saved_Color; // Cast saved_Color to int
 
         // get direction of play
         bool is_clockwise = !reverse_flag;
         Debug.Log("therPlayersHandCardCounts: " + otherPlayersHandCardCounts.Count);
 
+        Debug.Log("therPlayersHandCardCounts: " + otherPlayersHandCardCounts.Count);
 
 
+        // See if we should be playing draw two or draw four
+        UnoCardData last_card = null;
+        if (publicPile.Count > 0) {
+            last_card = (UnoCardData)publicPile[publicPile.Count - 1];
+        }
+
+        return new GameStateUno(deckCardCount, otherPlayersHandCardCounts, playerHandCards, publicCards,currentColor, is_clockwise, OpponentAHandCards, OpponentBHandCards);
         return new GameStateUno(deckCardCount, otherPlayersHandCardCounts, playerHandCards, publicCards,currentColor, is_clockwise, OpponentAHandCards, OpponentBHandCards);
     }
 

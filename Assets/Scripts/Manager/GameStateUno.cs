@@ -13,9 +13,11 @@ public class GameStateUno
 
     public List<UnoCardData> OpponentAHandCards; 
     public List<UnoCardData> OpponentBHandCards; 
+    
     public List<UnoCardData> PlayerHandCards; 
     public List<UnoCardData> PublicPile; 
     public int CurrentColor;
+    
     
     public bool Clockwise;  // Gives us the order of play
    
@@ -61,6 +63,18 @@ public class GameStateUno
             stateInfo += $"- {card.color} {card.value}\n";
         }
 
+        stateInfo += "Opponent A's Hand Cards:\n";
+        foreach (var card in OpponentAHandCards)
+        {
+            stateInfo += $"- {card.color} {card.value}\n";
+        }
+
+        stateInfo += "Opponent B's Hand Cards:\n";
+        foreach (var card in OpponentBHandCards)
+        {
+            stateInfo += $"- {card.color} {card.value}\n";
+        }
+
         stateInfo += "Public Pile:\n";
         foreach (var card in PublicPile)
         {
@@ -71,10 +85,32 @@ public class GameStateUno
 
         stateInfo += $"Rotation of play is clockwise: {Clockwise}\n";
 
+        stateInfo += $"Draw two is active: {D2Active}\n";
+
+        stateInfo += $"Draw four is active: {D4Active}\n";
+
         // Use Debug.Log to print the information
         Debug.Log(stateInfo);
 
        
+    }
+
+    // to prevent using teh same game state over loop
+    public GameStateUno Clone()
+    {
+        // Create a new instance and copy the values over
+        GameStateUno clone = new GameStateUno(
+            this.DeckCardCount, 
+            new List<int>(this.OtherPlayersHandCardCounts), 
+            new List<UnoCardData>(this.PlayerHandCards), 
+            new List<UnoCardData>(this.PublicPile), 
+            this.CurrentColor, 
+            this.Clockwise,
+            new List<UnoCardData>(this.OpponentAHandCards),
+            new List<UnoCardData>(this.OpponentBHandCards)
+        );
+
+        return clone;
     }
 
     // to prevent using teh same game state over loop
