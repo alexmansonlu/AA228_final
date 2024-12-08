@@ -25,7 +25,7 @@ public class GameStateUno
    
 
 
-    public GameStateUno(int deckCardCount, List<int> otherPlayersHandCardCounts, List<UnoCardData> playerHandCards, List<UnoCardData> publicPile, int currentColor = 0, bool order = true, List<UnoCardData> opponentAHandCards = null, List<UnoCardData> opponentBHandCards = null, bool isDrawFourActive = false, bool isDrawTwoActive = false)
+    public GameStateUno(int deckCardCount, List<int> otherPlayersHandCardCounts, List<UnoCardData> playerHandCards, List<UnoCardData> publicPile, int currentColor = 0, bool order = true, List<UnoCardData> opponentAHandCards = null, List<UnoCardData> opponentBHandCards = null, bool IsDrawFourActive = false, bool IsDrawTwoActive = false)
     {
         DeckCardCount = deckCardCount;
         OtherPlayersHandCardCounts = otherPlayersHandCardCounts;
@@ -37,8 +37,8 @@ public class GameStateUno
         OpponentAHandCards = opponentAHandCards;
         OpponentBHandCards = opponentBHandCards;
 
-        this.isDrawFourActive = isDrawFourActive;
-        this.isDrawTwoActive = isDrawTwoActive;
+        isDrawFourActive = IsDrawFourActive;
+        isDrawTwoActive = IsDrawTwoActive;
 
     }
 
@@ -91,6 +91,9 @@ public class GameStateUno
 
         stateInfo += $"Rotation of play is clockwise: {Clockwise}\n";
 
+        stateInfo += $"Draw Four is active: {isDrawFourActive}\n";
+        stateInfo += $"Draw Two is active: {isDrawTwoActive}\n";
+
 
         // Use Debug.Log to print the information
         Debug.Log(stateInfo);
@@ -110,7 +113,9 @@ public class GameStateUno
             this.CurrentColor, 
             this.Clockwise,
             new List<UnoCardData>(this.OpponentAHandCards),
-            new List<UnoCardData>(this.OpponentBHandCards)
+            new List<UnoCardData>(this.OpponentBHandCards),
+            this.isDrawFourActive,
+            this.isDrawTwoActive
         );
 
         return clone;

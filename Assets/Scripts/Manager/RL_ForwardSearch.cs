@@ -90,13 +90,14 @@ public class RL_ForwardSearch:MonoBehaviour
 
             // Draw 2 Case:
             else if (lastCardData.value == UnoValue.DrawTwo) {
+                Debug.Log("test B"+lastCardData.color + " " + lastCardData.value);
                 if (state.isDrawTwoActive) {
-                    // Debug.Log("test C");
+                    Debug.Log("test C");
                     return currentCard.value == UnoValue.DrawTwo;
                 }
 
                 else {
-                    // Debug.Log("test D");
+                    Debug.Log("test D");
                     return currentCard.color == lastCardData.color || currentCard.value == lastCardData.value;
                 }
             }
@@ -130,7 +131,7 @@ public class RL_ForwardSearch:MonoBehaviour
         {
             if (CheckPlayability(state, card))
             {
-                Debug.Log(card.color+" "+card.value);
+                //Debug.Log(card.color+" "+card.value);
                 playableCards.Add(card);
             }
         }
