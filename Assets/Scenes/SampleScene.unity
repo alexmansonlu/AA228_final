@@ -1961,7 +1961,7 @@ MonoBehaviour:
   myPlayerType: 1
   scores: 
   cardLefts: 
-  maxRound: 10
+  maxRound: 100
   rl_forward_search: {fileID: 1423093585}
 --- !u!4 &1423093584
 Transform:
