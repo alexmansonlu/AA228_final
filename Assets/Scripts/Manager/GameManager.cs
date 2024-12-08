@@ -123,7 +123,8 @@ public class GameManager : MonoBehaviour
 
         // Initialize player with a hand of Uno cards
         if(all_players.Count == 0){
-            player = new Player(handAreas[0],myPlayerType, "Agent");
+            // player = new Player(handAreas[0], myPlayerType, "Agent");
+            player = new Player(handAreas[0], PlayerType.Human, "Agent");  // This line works (allows you to pick color for Wild), but line above doesn't.
             all_players.Add(player);
             //player.DrawInitialHand(deck, cardPrefab, 7); // Draw 7 cards as starting hand
 
@@ -272,7 +273,7 @@ public class GameManager : MonoBehaviour
 
         }
 
-        if (current_player.playerType == PlayerType.AI_RL){
+        else if (current_player.playerType == PlayerType.AI_RL){
             // RL Agent play here
             GameStateUno gameState = getGameState();  // States
             gameState.LogState();
@@ -284,19 +285,19 @@ public class GameManager : MonoBehaviour
 
             // PlayCard(current_card)
 
-            UnoCardData cd = rl_forward_search.ForwardSearch(gameState.Clone(),2);
-            Debug.Log("forward search result: " + cd.color + " " + cd.value);
+            // UnoCardData cd = rl_forward_search.ForwardSearch(gameState.Clone(),2);
+            // Debug.Log("forward search result: " + cd.color + " " + cd.value);
 
-            foreach (GameObject cardObject in current_player.HandCardObjects)
-            {
-                Card cardComponent = cardObject.GetComponent<Card>();
-                if (((UnoCard)cardComponent).color == cd.color && ((UnoCard)cardComponent).value == cd.value)
-                {      
-                    //Debug.Log("AI played " + ((UnoCard)cardComponent).color  + " " + ((UnoCard)cardComponent).value);
-                    PlayCard(cardComponent);
-                    break;
-                }
-            }
+            // foreach (GameObject cardObject in current_player.HandCardObjects)
+            // {
+            //     Card cardComponent = cardObject.GetComponent<Card>();
+            //     if (((UnoCard)cardComponent).color == cd.color && ((UnoCard)cardComponent).value == cd.value)
+            //     {      
+            //         //Debug.Log("AI played " + ((UnoCard)cardComponent).color  + " " + ((UnoCard)cardComponent).value);
+            //         PlayCard(cardComponent);
+            //         break;
+            //     }
+            // }
 
 
         }
@@ -304,7 +305,7 @@ public class GameManager : MonoBehaviour
        
         
 
-        if (current_player.playerType == PlayerType.AI_Random){
+        else if (current_player.playerType == PlayerType.AI_Random){
             // Random AI play HERE
 
             if(current_player.HandCardObjects.Count == 0) return;
