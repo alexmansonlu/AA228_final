@@ -154,6 +154,7 @@ public class RL_ForwardSearch:MonoBehaviour
             intermediateReward = -20; // TODO: we need to adjust this number
 
             float futureUtility = RolloutLookahead(state.Clone(), depth);
+            
             return (null,futureUtility+intermediateReward);
 
         }
@@ -165,7 +166,7 @@ public class RL_ForwardSearch:MonoBehaviour
             foreach(var card in playableCards){
                 GameStateUno newState = ApplyAction(state.Clone(), card, 0);
                 float futureUtility = RolloutLookahead(newState.Clone(), depth);
-
+                futureUtility += RewardFunction(state, card);
                 // here can add intermediate reward if required (for keeping resource in hand)
 
                 if (futureUtility > bestUtility)
@@ -211,7 +212,6 @@ public class RL_ForwardSearch:MonoBehaviour
                 // agent turns
                 var (bestAction, futureUtility) = ForwardSearchRecursive(state.Clone(), depth - 1);  // Look ahead for next move
                 float weight = 1f; //since there is only one possibility as both opponents got no card to play
-                intermediateReward += RewardFunction(state, bestAction);
                 totalUtility += (futureUtility+intermediateReward) * weight;
 
             }
@@ -224,7 +224,6 @@ public class RL_ForwardSearch:MonoBehaviour
                     var (bestAction, futureUtility) = ForwardSearchRecursive(tempStateB.Clone(), depth - 1);  // Look ahead for next move
 
                     float weight = 1f/(opponentBPlayableCards.Count); // assume all playable card have equal possibility to be played
-                    intermediateReward += RewardFunction(state, bestAction);
                     totalUtility += (futureUtility+intermediateReward) * weight;
                 }
             }
@@ -244,7 +243,6 @@ public class RL_ForwardSearch:MonoBehaviour
                     tempStateA.OtherPlayersHandCardCounts[1] += 1;
                     var (bestAction, futureUtility) = ForwardSearchRecursive(tempStateA.Clone(), depth - 1);  // Look ahead for next move
                     float weight = 1f/(opponentAPlayableCards.Count);
-                    intermediateReward += RewardFunction(state, bestAction);
                     totalUtility += (futureUtility+intermediateReward) * weight;
                 
                 }
@@ -255,7 +253,6 @@ public class RL_ForwardSearch:MonoBehaviour
                         var (bestAction, futureUtility) = ForwardSearchRecursive(tempStateB.Clone(), depth - 1);  // Look ahead for next move for agent
 
                         float weight = 1f/(opponentBPlayableCards.Count*opponentAPlayableCards.Count); // assume all playable card have equal possibility to be played
-                        
                         totalUtility += (futureUtility+intermediateReward) * weight;
                     }
                 }
@@ -423,15 +420,17 @@ public class RL_ForwardSearch:MonoBehaviour
         }
 
         // Penalize for # of cards in hand
-        reward -= state.PlayerHandCardsCount * 5f;
+        reward -= state.PlayerHandCardsCount * 1f;
 
         // use clockwise to skip if a player has 1 card 
 
         // if asked to draw 
+        List<UnoCardData> next_player_cards = state.Clockwise ? state.OpponentAHandCards : state.OpponentBHandCards;
+
         if (state.PublicPile[-1].value == UnoValue.DrawTwo || state.PublicPile[-1].value == UnoValue.WildDrawFour) {
             // reward if stacked 
             if (action.value == UnoValue.DrawTwo || action.value == UnoValue.WildDrawFour) {
-                List<UnoCardData> next_player_cards = state.Clockwise ? state.OpponentAHandCards : state.OpponentBHandCards;
+                
                 reward += (20f / next_player_cards.Count); 
             }
             // penalize if forced to draw, penalized more if you have fewer cards 
@@ -439,22 +438,24 @@ public class RL_ForwardSearch:MonoBehaviour
                 reward += (20f / state.PlayerHandCardsCount);
             }
         }
-        // penalize playing +2, +4 if unecessary 
-        else {
-            if (action.value == UnoValue.DrawTwo || action.value == UnoValue.WildDrawFour) {
-                reward -= 20f; 
-            }
-        }
-        
-        // penalize for playing wild card 
-        if (action.color == UnoColor.Wild) {
-            reward -= 20f; 
-        }
+        reward += 40f - next_player_cards.Count * 10f;
 
-        // penalize for # of cards opponent has
-        foreach (int opponentCards in state.OtherPlayersHandCardCounts) {
-            reward -= opponentCards * 5f; // Penalize for fewer opponent cards
-        }
+        // penalize playing +2, +4 if unecessary 
+        // else {
+        //     if (action.value == UnoValue.DrawTwo || action.value == UnoValue.WildDrawFour) {
+        //         reward -= 20f; 
+        //     }
+        // }
+        
+        // // penalize for playing wild card 
+        // if (action.color == UnoColor.Wild) {
+        //     reward -= 20f; 
+        // }
+
+        // // penalize for # of cards opponent has
+        // foreach (int opponentCards in state.OtherPlayersHandCardCounts) {
+        //     reward -= opponentCards * 5f; // Penalize for fewer opponent cards
+        // }
         return reward;
     }
 }
