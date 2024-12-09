@@ -42,7 +42,7 @@ public class GameManager : MonoBehaviour
 
     [SerializeField] private List<int> scores;
     [SerializeField] private List<int> cardLefts;
-    [SerializeField] int maxRound = 100;
+    [SerializeField] int maxRound = 75;
     int currentRound = 0; 
 
 
@@ -319,9 +319,6 @@ public class GameManager : MonoBehaviour
             }
         }
 
-
-
-
     }
 
     // Playability check specific to Uno rules
@@ -428,6 +425,37 @@ public class GameManager : MonoBehaviour
         startNewGame = true;
     }
 
+    static UnoColor GetMostCommonColor(List<UnoCardData> unoCards, UnoColor chosenColor = UnoColor.Red)
+    {
+        Dictionary<UnoColor, int> colorCounts = new Dictionary<UnoColor, int>();
+
+        foreach (var card in unoCards)
+        {
+            if (colorCounts.ContainsKey(card.color))
+            {
+                colorCounts[card.color]++;
+            }
+            else
+            {
+                colorCounts[card.color] = 1;
+            }
+        }
+
+        UnoColor mostCommonColor = chosenColor;
+        int maxCount = 0;
+
+        foreach (var kvp in colorCounts)
+        {
+            if (kvp.Value > maxCount)
+            {
+                mostCommonColor = kvp.Key;
+                maxCount = kvp.Value;
+            }
+        }
+
+        return mostCommonColor;
+    }
+
     // Function to play a card and add it to the public pile
     public void PlayCard(Card card, UnoColor chosenColor = UnoColor.Red)
     {
@@ -484,8 +512,11 @@ public class GameManager : MonoBehaviour
                     }
                     else if (cardplayer.playerType == PlayerType.AI_Random){
                         // Random AI play HERE
-                        int randomIndex = UnityEngine.Random.Range(0, 4);
-                        colorPick((UnoColor)Enum.GetValues(typeof(UnoColor)).GetValue(randomIndex));
+                        GameStateUno gameState = getGameState();
+                        // colorPick(GetMostCommonColor(gameState.PlayerHandCards));
+                        colorPick(GetMostCommonColor(gameState.PublicPile));
+                        // int randomIndex = UnityEngine.Random.Range(0, 4);
+                        // colorPick((UnoColor)Enum.GetValues(typeof(UnoColor)).GetValue(randomIndex));
                     }
                     else if (cardplayer.playerType == PlayerType.AI_RL){
                         colorPick(chosenColor);
@@ -543,12 +574,8 @@ public class GameManager : MonoBehaviour
                 // if (cardplayer.playerType == PlayerType.Human || cardplayer.playerType == PlayerType.AI_RL){
                 //     cardplayer.TidyHand();
                 // }
-
-                
                 
             }
-
-            
 
         }
         else
@@ -557,7 +584,6 @@ public class GameManager : MonoBehaviour
 
             // maybe resent the state to the server
         }
-
         
     }
 

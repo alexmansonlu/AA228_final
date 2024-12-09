@@ -481,24 +481,36 @@ public class RL_ForwardSearch:MonoBehaviour
 
         // Penalize for # of cards in hand
         reward -= state.PlayerHandCardsCount * 1f;
-
+        // reward -= state.PlayerHandCardsCount * 2f;
+        // scenario c no penalty.
         // use clockwise to skip if a player has 1 card 
 
         // if asked to draw 
         List<UnoCardData> next_player_cards = state.Clockwise ? state.OpponentAHandCards : state.OpponentBHandCards;
 
+        // if (state.PublicPile[-1].value == UnoValue.Skip) {
+        //     reward -= 5f / state.PlayerHandCardsCount;
+        // }
+        // if (state.PublicPile[-1].value == action.value && state.PublicPile[-1].color == action.color) {
+        //     reward += 5f;
+        // }
+
+
         if (state.PublicPile[-1].value == UnoValue.DrawTwo || state.PublicPile[-1].value == UnoValue.WildDrawFour) {
             // reward if stacked 
             if (action.value == UnoValue.DrawTwo || action.value == UnoValue.WildDrawFour) {
                 
-                reward += (20f / next_player_cards.Count); 
+                reward += (40f / next_player_cards.Count); 
             }
             // penalize if forced to draw, penalized more if you have fewer cards 
             else {
-                reward += (20f / state.PlayerHandCardsCount);
+                reward -= (20f / state.PlayerHandCardsCount);
             }
         }
-        reward += 40f - next_player_cards.Count * 10f;
+        // scenario a
+        // reward += 40f - next_player_cards.Count * 10f;
+        // scenario b
+        reward += 40f - (state.OpponentAHandCards.Count * 4f + state.OpponentBHandCards.Count);
 
         // penalize playing +2, +4 if unecessary 
         // else {
