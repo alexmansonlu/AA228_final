@@ -512,14 +512,15 @@ public class GameManager : MonoBehaviour
                     }
                     else if (cardplayer.playerType == PlayerType.AI_Random){
                         // Random AI play HERE
-                        GameStateUno gameState = getGameState();
-                        // colorPick(GetMostCommonColor(gameState.PlayerHandCards));
-                        colorPick(GetMostCommonColor(gameState.PublicPile));
-                        // int randomIndex = UnityEngine.Random.Range(0, 4);
-                        // colorPick((UnoColor)Enum.GetValues(typeof(UnoColor)).GetValue(randomIndex));
+                        // colorPick(GetMostCommonColor(gameState.PublicPile));
+                        int randomIndex = UnityEngine.Random.Range(0, 4);
+                        colorPick((UnoColor)Enum.GetValues(typeof(UnoColor)).GetValue(randomIndex));
                     }
                     else if (cardplayer.playerType == PlayerType.AI_RL){
-                        colorPick(chosenColor);
+                        GameStateUno gameState = getGameState();
+                        colorPick(GetMostCommonColor(gameState.PlayerHandCards));
+
+                        // colorPick(chosenColor);
                     }
 
                     Destroy(card.gameObject); // Haven't tested, could be buggy
